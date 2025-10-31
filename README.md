@@ -2,6 +2,22 @@
 
 An intelligent **LLM-powered agentic system** for automated release risk assessment using **LangGraph orchestration** and **Pydantic data validation**. The system provides comprehensive pull request analysis with **LLM-first intelligence** and **reliable heuristic fallback** mechanisms.
 
+## 🚀 Quick Start
+
+**New to the Release Risk Analyzer?** Check out our comprehensive guides:
+
+- **[🏃 QUICK_START.md](QUICK_START.md)** - 5-minute setup guide
+- **[📖 HOW_TO_RUN.md](HOW_TO_RUN.md)** - Complete setup and usage instructions
+- **[🔌 PLUGIN_FRAMEWORK_GUIDE.md](PLUGIN_FRAMEWORK_GUIDE.md)** - Plugin development guide
+
+### Run the Demo
+```bash
+git clone https://gecgithub01.walmart.com/n0m08hp/RiskAnalyzerAgent.git
+cd RiskAnalyzerAgent
+pip install -r requirements.txt
+cd src && python simple_demo.py
+```
+
 ## 🎯 System Overview
 
 The Release Risk Analyzer implements a sophisticated **3-agent architecture** with **LLM integration** that analyzes pull requests through sequential processing stages, providing intelligent recommendations for release decisions.
@@ -790,10 +806,19 @@ async def security_agent(state: RiskAnalysisState) -> RiskAnalysisState:
 
 ## 📚 Documentation
 
+### Getting Started
+- **[🏃 QUICK_START.md](QUICK_START.md)** - 5-minute setup guide for immediate usage
+- **[📖 HOW_TO_RUN.md](HOW_TO_RUN.md)** - Comprehensive setup, configuration, and usage instructions
+- **[🔌 PLUGIN_FRAMEWORK_GUIDE.md](PLUGIN_FRAMEWORK_GUIDE.md)** - Complete plugin development guide
+
+### Architecture & Technical Details  
 - **[Architecture.md](Architecture.md)**: Detailed system architecture and design patterns with comprehensive agent specifications
 - **[AGENT_SPECIFICATIONS.md](AGENT_SPECIFICATIONS.md)**: Complete technical specifications for each agent including algorithms, decision trees, and implementation patterns
+- **[PLUGIN_IMPLEMENTATION_SUMMARY.md](PLUGIN_IMPLEMENTATION_SUMMARY.md)**: Plugin framework implementation summary
+
+### Reference Materials
 - **[RiskAnalyzerReq.txt](RiskAnalyzerReq.txt)**: Original requirements specification
-- **[CLEANUP_SUMMARY.md](CLEANUP_SUMMARY.md)**: Documentation of implementation cleanup and simplification process
+- **[LLM_INTEGRATION_SUMMARY.md](LLM_INTEGRATION_SUMMARY.md)**: LLM integration details and patterns
 
 ## 🤝 Contributing
 
