@@ -71,9 +71,43 @@ python simple_demo.py
 
 ## 🔧 Configuration Setup
 
-### Environment Variables (Optional)
+### Environment Variables (.env File)
 
-For LLM integration, set up environment variables:
+The framework now uses a `.env` file for configuration. Create one from the template:
+
+```bash
+cp .env.template .env
+```
+
+Edit the `.env` file with your settings:
+
+```bash
+# LLM Provider Configuration
+LLM_PROVIDER=openai
+FALLBACK_LLM_PROVIDER=anthropic
+
+# OpenAI Configuration
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL=gpt-4
+
+# Anthropic Configuration  
+ANTHROPIC_API_KEY=your-anthropic-api-key-here
+ANTHROPIC_MODEL=claude-3-sonnet-20240229
+
+# Notification Configuration
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+EMAIL_SMTP_SERVER=smtp.company.com
+EMAIL_FROM_ADDRESS=noreply@company.com
+
+# Optional Settings
+LLM_TIMEOUT_SECONDS=60
+LOG_LEVEL=INFO
+ENABLE_METRICS=true
+```
+
+### Legacy Environment Variables
+
+You can still use traditional environment variables:
 
 ```bash
 # OpenAI (Primary LLM provider)
@@ -81,6 +115,9 @@ export OPENAI_API_KEY="your-openai-api-key"
 
 # Anthropic (Fallback LLM provider)
 export ANTHROPIC_API_KEY="your-anthropic-api-key"
+
+# Override LLM provider
+export LLM_PROVIDER="anthropic"  # Optional: override default
 
 # Slack notifications
 export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/xxx"
@@ -91,7 +128,7 @@ export SMTP_PASSWORD="your-smtp-password"
 
 ### Configuration Files
 
-Choose a configuration based on your environment:
+The framework automatically merges `.env` configuration with YAML files:
 
 #### Development Environment
 ```bash
@@ -110,6 +147,8 @@ cp config/basic_config.yaml config/active_config.yaml
 # Use full enterprise features
 cp config/enterprise_config.yaml config/active_config.yaml
 ```
+
+> **Note**: Environment variables in `.env` take precedence over YAML configuration values.
 
 ## 🎯 Running Different Scenarios
 

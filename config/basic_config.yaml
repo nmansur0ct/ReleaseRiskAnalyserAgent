@@ -13,11 +13,9 @@ plugins:
   change_log_summarizer:
     enabled: true
     config:
-      llm_provider: "openai"
       confidence_threshold: 0.7
       analysis_depth: "comprehensive"
       timeout_seconds: 60
-      fallback_provider: "anthropic"
 
   # Security analysis - runs in parallel
   security_analyzer:

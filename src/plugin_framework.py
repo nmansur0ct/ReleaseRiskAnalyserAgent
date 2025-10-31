@@ -15,6 +15,8 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
+from .environment_config import get_env_config
+
 if TYPE_CHECKING:
     from .enhanced_models import RiskAnalysisState
 
@@ -283,22 +285,32 @@ class AgentPluginRegistry:
                         in_degree[other_node] -= 1
 
 class ConfigurationManager:
-    """Manages plugin configuration with hot-reload capability"""
+    """Manages plugin configuration with hot-reload capability and environment integration"""
     
     def __init__(self, config_path: str):
         self.config_path = Path(config_path)
         self.config: Dict[str, Any] = {}
         self.callbacks: List[Callable] = []
         self.last_modified: Optional[float] = None
+        self.env_config = get_env_config()
         
     async def load_config(self) -> Dict[str, Any]:
-        """Load configuration from file"""
+        """Load configuration from file and merge with environment variables"""
         try:
+            # Load YAML configuration
             with open(self.config_path, 'r') as f:
-                self.config = yaml.safe_load(f)
+                yaml_config = yaml.safe_load(f)
+            
+            # Merge with environment configuration
+            self.config = self.env_config.merge_with_yaml_config(yaml_config)
             
             self.last_modified = self.config_path.stat().st_mtime
-            logger.info(f"Configuration loaded from {self.config_path}")
+            logger.info(f"Configuration loaded from {self.config_path} with environment overrides")
+            
+            # Validate LLM configuration
+            if not self.env_config.validate_llm_config():
+                logger.warning("LLM configuration validation failed - some features may not work")
+            
             return self.config
             
         except Exception as e:
@@ -331,11 +343,28 @@ class ConfigurationManager:
     
     def get_agent_config(self, agent_name: str) -> Dict[str, Any]:
         """Get configuration for specific agent"""
+        # Support both 'agents' and 'plugins' configuration structure
         agents_config = self.config.get('agents', [])
-        for agent_config in agents_config:
-            if agent_config.get('name') == agent_name:
-                return agent_config.get('config', {})
+        if not agents_config:
+            # Try the new plugins structure
+            plugins_config = self.config.get('plugins', {})
+            if agent_name in plugins_config:
+                return plugins_config[agent_name].get('config', {})
+        else:
+            # Legacy agents structure
+            for agent_config in agents_config:
+                if agent_config.get('name') == agent_name:
+                    return agent_config.get('config', {})
         return {}
+    
+    def get_llm_config(self) -> Dict[str, Any]:
+        """Get LLM configuration from environment"""
+        return self.env_config.get_llm_config()
+    
+    def reload_env_config(self):
+        """Reload environment configuration"""
+        self.env_config.reload()
+        logger.info("Environment configuration reloaded")
 
 class PluginLoader:
     """Dynamically loads agent plugins from various sources"""

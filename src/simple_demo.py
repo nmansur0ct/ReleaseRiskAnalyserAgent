@@ -1,12 +1,46 @@
 """
 Simple Plugin Framework Demo
-Demonstrates the modular plugin system
+Demonstrates the modular plugin system with environment configuration
 """
 
 import asyncio
 import logging
 from datetime import datetime
 from typing import Dict, Any
+import sys
+import os
+
+# Add the src directory to the path for imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from environment_config import get_env_config
+    from llm_integration import get_llm_manager
+    ENV_MODULES_AVAILABLE = True
+except ImportError:
+    # Fallback if modules aren't available
+    ENV_MODULES_AVAILABLE = False
+    
+    class MockEnvConfig:
+        def get_llm_config(self):
+            return {
+                'provider': os.getenv('LLM_PROVIDER', 'mock'),
+                'fallback_provider': os.getenv('FALLBACK_LLM_PROVIDER', 'mock'),
+                'openai_api_key': os.getenv('OPENAI_API_KEY'),
+                'anthropic_api_key': os.getenv('ANTHROPIC_API_KEY')
+            }
+    
+    class MockLLMManager:
+        def get_available_providers(self):
+            return ['mock']
+        def validate_configuration(self):
+            return {'mock': True}
+    
+    def get_env_config():
+        return MockEnvConfig()
+    
+    def get_llm_manager():
+        return MockLLMManager()
 
 # Configure logging
 logging.basicConfig(
@@ -21,6 +55,26 @@ async def simple_plugin_demo():
     
     print("🚀 Plugin Framework Architecture Demonstration")
     print("="*80)
+    
+    # Demonstrate environment configuration
+    print("\n🔧 Environment Configuration Status:")
+    print("-" * 40)
+    
+    env_config = get_env_config()
+    llm_config = env_config.get_llm_config()
+    
+    print(f"LLM Provider: {llm_config['provider']}")
+    print(f"Fallback Provider: {llm_config['fallback_provider']}")
+    print(f"OpenAI Configured: {'Yes' if llm_config['openai_api_key'] else 'No (using env default)'}")
+    print(f"Anthropic Configured: {'Yes' if llm_config['anthropic_api_key'] else 'No (using env default)'}")
+    
+    # Check LLM manager
+    llm_manager = get_llm_manager()
+    available_providers = llm_manager.get_available_providers()
+    print(f"Available LLM Providers: {', '.join(available_providers)}")
+    
+    validation_results = llm_manager.validate_configuration()
+    print(f"Provider Validation: {validation_results}")
     
     # Sample PR data
     sample_pr_data = {

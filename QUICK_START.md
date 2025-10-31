@@ -42,9 +42,21 @@ plugins:
     enabled: true
 ```
 
-### Environment Variables
+### Environment Configuration
+```bash
+# Create .env file from template
+cp .env.template .env
+
+# Edit .env file with your settings
+LLM_PROVIDER=openai
+OPENAI_API_KEY="your-key"
+SLACK_WEBHOOK_URL="your-webhook"
+```
+
+### Legacy Environment Variables
 ```bash
 export OPENAI_API_KEY="your-key"
+export LLM_PROVIDER="openai"
 export SLACK_WEBHOOK_URL="your-webhook"
 ```
 
@@ -62,6 +74,9 @@ python src/simple_demo.py --config config/enterprise_config.yaml
 
 # Check configuration
 python -c "import yaml; print(yaml.safe_load(open('config/basic_config.yaml')))"
+
+# Validate environment
+python -c "from src.environment_config import get_env_config; c=get_env_config(); print(f'LLM: {c.get_llm_config()}')"
 ```
 
 ## 🐛 Quick Troubleshooting

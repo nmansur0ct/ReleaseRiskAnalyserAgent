@@ -11,6 +11,7 @@ from .plugin_framework import (
     BaseAgentPlugin, AgentMetadata, AgentInput, AgentOutput,
     AgentCapability, ExecutionMode
 )
+from .llm_integration import get_llm_manager, analyze_code_changes
 
 class ChangeLogSummarizerPlugin(BaseAgentPlugin):
     """Enhanced Change Log Summarizer Agent Plugin"""
@@ -70,56 +71,75 @@ class ChangeLogSummarizerPlugin(BaseAgentPlugin):
             )
     
     async def _analyze_with_llm(self, pr_data: Dict[str, Any]) -> Dict[str, Any]:
-        """LLM-powered analysis"""
-        # Simulated LLM analysis - replace with actual LLM integration
-        await asyncio.sleep(0.1)  # Simulate API call
-        
-        changed_files = pr_data.get('changed_files', [])
-        additions = pr_data.get('additions', 0)
-        deletions = pr_data.get('deletions', 0)
-        
-        # Intelligent module detection
-        modules = set()
-        for file_path in changed_files:
-            parts = file_path.split('/')
-            if 'src' in parts:
-                idx = parts.index('src')
-                if idx + 1 < len(parts):
-                    modules.add(parts[idx + 1])
-            elif len(parts) > 1:
-                modules.add(parts[0])
-        
-        # Risk indicator detection
-        risk_indicators = []
-        content = f"{pr_data.get('title', '')} {pr_data.get('body', '')}".lower()
-        
-        risk_patterns = {
-            'security': ['auth', 'password', 'token', 'security', 'vulnerability'],
-            'database': ['migration', 'schema', 'sql', 'database', 'table'],
-            'api': ['endpoint', 'route', 'api', 'rest', 'graphql'],
-            'infrastructure': ['deploy', 'config', 'environment', 'docker']
-        }
-        
-        for category, patterns in risk_patterns.items():
-            if any(pattern in content for pattern in patterns):
-                risk_indicators.append(category)
-        
-        # Change size classification
-        total_changes = additions + deletions
-        if total_changes > 500 or len(changed_files) > 20:
-            change_size = "large"
-        elif total_changes > 100 or len(changed_files) > 5:
-            change_size = "medium"
-        else:
-            change_size = "small"
-        
-        return {
-            'summary': f"Modified {len(changed_files)} files with {total_changes} total changes",
-            'affected_modules': list(modules),
-            'change_size': change_size,
-            'risk_indicators': risk_indicators,
-            'confidence': 0.85
-        }
+        """LLM-powered analysis using environment-configured provider"""
+        try:
+            # Use the new LLM integration with environment configuration
+            llm_manager = get_llm_manager()
+            
+            # Get provider from config or use environment default
+            provider = self.config.get('llm_provider')
+            
+            # Analyze using LLM
+            result = await analyze_code_changes(pr_data, provider)
+            
+            if result['success']:
+                # Parse the LLM response (assuming JSON format)
+                # In a real implementation, you'd parse the actual LLM response
+                changed_files = pr_data.get('changed_files', [])
+                additions = pr_data.get('additions', 0)
+                deletions = pr_data.get('deletions', 0)
+                
+                # Intelligent module detection
+                modules = set()
+                for file_path in changed_files:
+                    parts = file_path.split('/')
+                    if 'src' in parts:
+                        idx = parts.index('src')
+                        if idx + 1 < len(parts):
+                            modules.add(parts[idx + 1])
+                    elif len(parts) > 1:
+                        modules.add(parts[0])
+                
+                # Risk indicator detection
+                risk_indicators = []
+                content = f"{pr_data.get('title', '')} {pr_data.get('body', '')}".lower()
+                
+                risk_patterns = {
+                    'security': ['auth', 'password', 'token', 'security', 'vulnerability'],
+                    'database': ['migration', 'schema', 'sql', 'database', 'table'],
+                    'api': ['endpoint', 'route', 'api', 'rest', 'graphql'],
+                    'infrastructure': ['deploy', 'config', 'environment', 'docker']
+                }
+                
+                for category, patterns in risk_patterns.items():
+                    if any(pattern in content for pattern in patterns):
+                        risk_indicators.append(category)
+                
+                # Change size classification
+                total_changes = additions + deletions
+                if total_changes > 500 or len(changed_files) > 20:
+                    change_size = "large"
+                elif total_changes > 100 or len(changed_files) > 5:
+                    change_size = "medium"
+                else:
+                    change_size = "small"
+                
+                return {
+                    'summary': f"LLM Analysis: Modified {len(changed_files)} files with {total_changes} total changes",
+                    'affected_modules': list(modules),
+                    'change_size': change_size,
+                    'risk_indicators': risk_indicators,
+                    'confidence': 0.9,  # Higher confidence for LLM analysis
+                    'llm_provider': result['provider_used'],
+                    'llm_response': result['response'][:200] + "..." if len(result['response']) > 200 else result['response']
+                }
+            else:
+                # LLM failed, fall back to heuristic analysis
+                return await self._analyze_with_heuristics(pr_data)
+                
+        except Exception as e:
+            # Fallback to heuristic analysis on any error
+            return await self._analyze_with_heuristics(pr_data)
     
     async def _analyze_with_heuristics(self, pr_data: Dict[str, Any]) -> Dict[str, Any]:
         """Heuristic-based analysis"""
