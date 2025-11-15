@@ -13,6 +13,8 @@ The system employs a hybrid analysis approach, leveraging both semantic understa
 - **Multi-Repository Support**: Analyze PRs across multiple repositories in a single execution
 - **Comprehensive Comment Analysis**: Retrieves and analyzes both issue comments and inline code review comments
 - **Hybrid Analysis Engine**: Combines LLM semantic understanding with rule-based heuristic analysis
+- **Multi-Language Code Review**: Specialized agents for Python, Java, Node.js, and React.js analysis
+- **Database Query Optimization**: Automated review for BigQuery, Azure SQL, PostgreSQL, and Cosmos DB
 
 ### AI-Powered Decision Making
 - **LLM Provider Flexibility**: Supports multiple LLM providers including Walmart LLM Gateway, OpenAI, and Anthropic
@@ -124,6 +126,29 @@ Each plugin operates independently and contributes specialized analysis:
 3. **Compliance Checker**: Validates PCI DSS, GDPR, SOX adherence and code coverage requirements
 4. **Release Decision Agent**: Provides final recommendation with risk assessment and manual review requirements
 5. **Notification Agent**: Manages stakeholder communication and escalation routing
+
+### Code Review Agents
+
+The system includes specialized code review agents for multi-language and database analysis:
+
+#### Language-Specific Agents
+1. **PythonCodeReviewAgent**: Python code quality, complexity, and security analysis with PEP 8 validation
+2. **JavaCodeReviewAgent**: Java code review with style, complexity, and Javadoc analysis
+3. **NodeJSCodeReviewAgent**: JavaScript/TypeScript analysis for Node.js applications
+4. **ReactJSCodeReviewAgent**: React component analysis including hooks, performance, and accessibility
+
+#### Database Review Agents
+5. **BigQueryReviewAgent**: BigQuery SQL optimization and cost analysis
+6. **AzureSQLReviewAgent**: Azure SQL query performance and best practices
+7. **PostgreSQLReviewAgent**: PostgreSQL-specific optimization and indexing analysis
+8. **CosmosDBReviewAgent**: Cosmos DB query and partition key analysis
+
+Each agent uses LLM-powered analysis with strict anti-hallucination prompts to provide:
+- Code quality scores (0-100)
+- Complexity analysis (0-100)
+- Comment coverage percentage
+- Specific issues with exact line numbers
+- Severity classification (critical, warning, info)
 
 ### Analysis Workflow
 
@@ -306,6 +331,7 @@ ReleaseRiskAnalyserAgent/
 │   ├── plugin_framework.py       # Plugin architecture implementation
 │   ├── enhanced_models.py        # Data models and schemas
 │   ├── example_plugins.py        # Sample plugin implementations
+│   ├── code_review_agents.py     # Multi-language code review agents
 │   └── workflow.py              # Analysis workflow orchestration
 │
 ├── reports/               # Generated analysis reports (auto-created)
@@ -361,6 +387,25 @@ Provides extensible plugin architecture:
 - `Plugin`: Base class for all analysis plugins
 - `PluginManager`: Manages plugin lifecycle and execution
 - `PluginResult`: Standardized plugin output format
+
+### Code Review Agents (`code_review_agents.py`)
+
+Multi-language code quality analysis agents:
+- Language-specific analysis (Python, Java, Node.js, React)
+- Database query optimization (BigQuery, Azure SQL, PostgreSQL, Cosmos DB)
+- LLM-powered code understanding with anti-hallucination prompts
+- Quality, complexity, and comment coverage scoring
+- Issue detection with exact line numbers and severity levels
+
+**Key Classes:**
+- `PythonCodeReviewAgent`: Python code analysis with PEP 8 validation
+- `JavaCodeReviewAgent`: Java code quality and Javadoc review
+- `NodeJSCodeReviewAgent`: JavaScript/TypeScript analysis
+- `ReactJSCodeReviewAgent`: React component and hooks analysis
+- `BigQueryReviewAgent`: BigQuery SQL optimization
+- `AzureSQLReviewAgent`: Azure SQL performance analysis
+- `PostgreSQLReviewAgent`: PostgreSQL query optimization
+- `CosmosDBReviewAgent`: Cosmos DB best practices
 
 ### Analysis Workflow (`simple_demo.py`)
 
