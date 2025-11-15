@@ -15,7 +15,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
-from .environment_config import get_env_config
+from environment_config import get_env_config
 
 if TYPE_CHECKING:
     from .enhanced_models import RiskAnalysisState

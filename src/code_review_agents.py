@@ -8,11 +8,11 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from .plugin_framework import (
+from plugin_framework import (
     BaseAgentPlugin, AgentMetadata, AgentInput, AgentOutput,
     AgentCapability, ExecutionMode
 )
-from .llm_integration import get_llm_manager
+from llm_integration import get_llm_manager
 
 class PythonCodeReviewAgent(BaseAgentPlugin):
     """Python code quality and security review agent using LLM"""
@@ -156,7 +156,7 @@ Provide your analysis in STRICT JSON format with NO additional text:
   "quality_score": <0-100, where 100 is perfect quality>
 }
 
-Only include issues that are verifiable from the code above. Return ONLY valid JSON, no markdown formatting."""
+Only include issues that are verifiable from the code above. Return ONLY valid JSON, no markdown formatting. """
         
         try:
             llm_response = await llm_manager.generate_with_fallback(
