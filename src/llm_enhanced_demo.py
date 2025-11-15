@@ -1,6 +1,6 @@
 """
-LLM-Enhanced Release Risk Analyzer Demo
-Demonstrates LLM-first analysis with heuristic fallback for all three agents.
+Agent LLM-Enhanced Release Risk Analyzer Demo
+Demonstrates Agent LLM-first analysis with heuristic fallback for all three agents.
 """
 
 import asyncio
@@ -9,12 +9,12 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
-# Mock LLM interface for demonstration
-class MockLLMClient:
-    """Mock LLM client for demonstration purposes."""
+# Mock Agent LLM interface for demonstration
+class MockAgentLLMClient:
+    """Mock Agent LLM client for demonstration purposes."""
     
     async def generate_response(self, prompt: str, timeout: int = 30) -> str:
-        """Simulate LLM response generation."""
+        """Simulate Agent LLM response generation."""
         await asyncio.sleep(0.1)  # Simulate API delay
         
         # Parse prompt to determine response type
@@ -94,7 +94,7 @@ class MockLLMClient:
 
 class AnalysisMode(Enum):
     """Analysis execution modes."""
-    LLM_FIRST = "llm_first"
+    AGENT_LLM_FIRST = "agent_llm_first"
     HEURISTIC_ONLY = "heuristic_only"
     HYBRID = "hybrid"
 
@@ -109,7 +109,7 @@ class RiskAnalysisState:
     final_decision: Optional[Dict[str, Any]] = None
     current_agent: Optional[str] = None
     confidence: float = 1.0
-    analysis_mode: AnalysisMode = AnalysisMode.LLM_FIRST
+    analysis_mode: AnalysisMode = AnalysisMode.AGENT_LLM_FIRST
 
 class BaseLLMAgent:
     """Enhanced base agent with LLM integration capabilities."""
@@ -117,7 +117,7 @@ class BaseLLMAgent:
     def __init__(self, agent_id: str, config: Dict[str, Any]):
         self.agent_id = agent_id
         self.config = config
-        self.llm_client = MockLLMClient()
+        self.llm_client = MockAgentLLMClient()
         self.llm_timeout = config.get("llm_timeout", 30)
         self.fallback_threshold = config.get("fallback_threshold", 0.5)
     
@@ -126,8 +126,8 @@ class BaseLLMAgent:
         
         try:
             # Determine analysis mode
-            if state.analysis_mode == AnalysisMode.LLM_FIRST:
-                result = await self._llm_analysis(state)
+            if state.analysis_mode == AnalysisMode.AGENT_LLM_FIRST:
+                result = await self._agent_llm_analysis(state)
             elif state.analysis_mode == AnalysisMode.HEURISTIC_ONLY:
                 result = await self._heuristic_analysis(state)
             else:  # HYBRID
@@ -166,7 +166,7 @@ class BaseLLMAgent:
         # Try LLM first
         llm_result = None
         try:
-            llm_result = await self._llm_analysis(state)
+            llm_result = await self._agent_llm_analysis(state)
             if llm_result.get("llm_confidence", 0) >= self.fallback_threshold:
                 print(f"[{self.agent_id}] Using LLM analysis (confidence: {llm_result.get('llm_confidence')})")
                 return llm_result
@@ -200,9 +200,9 @@ class BaseLLMAgent:
         
         return True
     
-    async def _llm_analysis(self, state: RiskAnalysisState) -> Dict[str, Any]:
-        """LLM-powered analysis (to be implemented by subclasses)."""
-        raise NotImplementedError("Subclasses must implement _llm_analysis")
+    async def _agent_llm_analysis(self, state: RiskAnalysisState) -> Dict[str, Any]:
+        """You are an Agent doing LLM analysis - implement in subclasses."""
+        raise NotImplementedError("Subclasses must implement _agent_llm_analysis")
     
     async def _heuristic_analysis(self, state: RiskAnalysisState) -> Dict[str, Any]:
         """Heuristic fallback analysis (to be implemented by subclasses)."""
@@ -216,27 +216,27 @@ class BaseLLMAgent:
         """Get required fields for result validation (to be implemented by subclasses)."""
         return ["analysis_method"]
 
-class LLMChangeLogSummarizerAgent(BaseLLMAgent):
-    """LLM-enhanced Change Log Summarizer Agent."""
+class ChangeLogSummarizerAgent(BaseLLMAgent):
+    """Agent LLM-enhanced Change Log Summarizer Agent."""
     
     def __init__(self, config: Dict[str, Any]):
         super().__init__("change_log_summarizer", config)
     
-    async def _llm_analysis(self, state: RiskAnalysisState) -> Dict[str, Any]:
-        """LLM-powered change analysis."""
+    async def _agent_llm_analysis(self, state: RiskAnalysisState) -> Dict[str, Any]:
+        """You are an Agent doing LLM-powered change analysis."""
         
         file_list = ", ".join(state.pr_files[:15])
         if len(state.pr_files) > 15:
             file_list += f" ... and {len(state.pr_files) - 15} more files"
         
         prompt = f"""
-        Analyze this pull request and provide a structured summary:
+        You are an Agent doing analysis of this pull request and provide a structured summary:
         
         PR Title: {state.pr_title}
         PR Description: {state.pr_body}
         Changed Files: {file_list}
         
-        Please provide analysis in JSON format with change_type, complexity, modules_affected, 
+        As an Agent, please provide analysis in JSON format with change_type, complexity, modules_affected, 
         risk_indicators, summary, potential_impacts, security_risks, and confidence (0.0-1.0).
         
         Focus on identifying core business logic changes, security modifications, 
@@ -371,14 +371,14 @@ class LLMChangeLogSummarizerAgent(BaseLLMAgent):
         """Required fields for validation."""
         return ["change_type", "complexity", "modules_touched", "analysis_method", "llm_confidence"]
 
-class LLMPolicyValidatorAgent(BaseLLMAgent):
-    """LLM-enhanced Policy Validator Agent."""
+class SecurityAnalyzerAgent(BaseLLMAgent):
+    """Agent LLM-enhanced Security Analysis Agent."""
     
     def __init__(self, config: Dict[str, Any]):
-        super().__init__("policy_validator", config)
+        super().__init__("security_analyzer", config)
     
-    async def _llm_analysis(self, state: RiskAnalysisState) -> Dict[str, Any]:
-        """LLM-powered policy compliance analysis."""
+    async def _agent_llm_analysis(self, state: RiskAnalysisState) -> Dict[str, Any]:
+        """You are an Agent doing LLM-powered security analysis."""
         
         change_summary = state.change_summary or {}
         summary_text = f"""
@@ -405,19 +405,19 @@ class LLMPolicyValidatorAgent(BaseLLMAgent):
         """
         
         prompt = f"""
-        Analyze this change for policy compliance:
+        You are an Agent doing analysis of this change for security compliance:
         
         Change Summary: {summary_text}
         Files Changed: {file_list}
-        Organizational Policies: {policies_text}
+        Security Policies: {policies_text}
         
-        Provide compliance analysis in JSON format with compliance_status, policy_violations,
+        As an Agent, provide security analysis in JSON format with compliance_status, policy_violations,
         compliance_checks, risk_level, approval_required, required_reviewers, confidence, and reasoning.
         """
         
         response = await self._execute_llm_with_timeout(prompt)
         if not response:
-            raise ValueError("LLM compliance analysis failed")
+            raise ValueError("Agent LLM security analysis failed")
         
         try:
             result_data = json.loads(response)
@@ -552,17 +552,17 @@ class LLMPolicyValidatorAgent(BaseLLMAgent):
         """Required fields for validation."""
         return ["compliance_status", "risk_level", "analysis_method", "llm_confidence"]
 
-class LLMReleaseDecisionAgent(BaseLLMAgent):
-    """LLM-enhanced Release Decision Agent."""
+class ComplianceCheckerAgent(BaseLLMAgent):
+    """Agent LLM-enhanced Compliance Checker Agent."""
     
     def __init__(self, config: Dict[str, Any]):
-        super().__init__("release_decision", config)
+        super().__init__("compliance_checker", config)
         self.decision_thresholds = config.get("decision_thresholds", {
             "auto_approve": 30, "conditional_approve": 50, "auto_reject": 80
         })
     
-    async def _llm_analysis(self, state: RiskAnalysisState) -> Dict[str, Any]:
-        """LLM-powered release decision analysis."""
+    async def _agent_llm_analysis(self, state: RiskAnalysisState) -> Dict[str, Any]:
+        """You are an Agent doing LLM-powered compliance analysis."""
         
         change_summary = self._format_change_summary(state)
         policy_validation = self._format_policy_validation(state)
@@ -575,24 +575,24 @@ class LLMReleaseDecisionAgent(BaseLLMAgent):
         """
         
         prompt = f"""
-        Analyze this change and make a release decision:
+        You are an Agent doing analysis of this change and making a compliance decision:
         
         CHANGE SUMMARY:
         {change_summary}
         
-        POLICY VALIDATION:
+        SECURITY VALIDATION:
         {policy_validation}
         
         ORGANIZATIONAL CONTEXT:
         {organizational_context}
         
-        Provide decision analysis in JSON format with recommended_decision, confidence_level,
+        As an Agent, provide compliance decision analysis in JSON format with recommended_decision, confidence_level,
         risk_assessment, decision_rationale, conditions, and monitoring_requirements.
         """
         
         response = await self._execute_llm_with_timeout(prompt)
         if not response:
-            raise ValueError("LLM decision analysis failed")
+            raise ValueError("Agent LLM compliance analysis failed")
         
         try:
             result_data = json.loads(response)
@@ -779,7 +779,7 @@ async def run_llm_enhanced_demo():
                 pr_title="Add OAuth2 integration for user authentication",
                 pr_body="Implements OAuth2 authentication flow with secure token handling",
                 pr_files=["src/auth/oauth2.py", "src/user/service.py", "tests/auth/test_oauth2.py"],
-                analysis_mode=AnalysisMode.LLM_FIRST
+                analysis_mode=AnalysisMode.AGENT_LLM_FIRST
             )
         },
         {
@@ -809,9 +809,9 @@ async def run_llm_enhanced_demo():
         "decision_thresholds": {"auto_approve": 30, "conditional_approve": 50, "auto_reject": 80}
     }
     
-    summarizer = LLMChangeLogSummarizerAgent(config)
-    validator = LLMPolicyValidatorAgent(config)
-    decision_agent = LLMReleaseDecisionAgent(config)
+    summarizer = ChangeLogSummarizerAgent(config)
+    validator = SecurityAnalyzerAgent(config)
+    decision_agent = ComplianceCheckerAgent(config)
     
     # Process each scenario
     for scenario in scenarios:

@@ -9,7 +9,22 @@ from typing import Dict, Any, Optional, List, Union
 from abc import ABC, abstractmethod
 import logging
 
-from .environment_config import get_env_config
+try:
+    from environment_config import get_env_config
+except ImportError:
+    # Fallback for standalone execution
+    import os
+    class MockEnvConfig:
+        def get_llm_config(self):
+            return {
+                'provider': os.getenv('LLM_PROVIDER', 'mock'),
+                'walmart_llm_gateway_url': os.getenv('WALMART_LLM_GATEWAY_URL', 'https://wmtllmgateway.stage.walmart.com/wmtllmgateway'),
+                'walmart_llm_gateway_key': os.getenv('WALMART_LLM_GATEWAY_KEY'),
+                'openai_api_key': os.getenv('OPENAI_API_KEY'),
+                'anthropic_api_key': os.getenv('ANTHROPIC_API_KEY')
+            }
+    def get_env_config():
+        return MockEnvConfig()
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +113,57 @@ class AnthropicProvider(LLMProvider):
             logger.error(f"Anthropic API call failed: {e}")
             raise
 
+class WalmartLLMGatewayProvider(LLMProvider):
+    """Walmart LLM Gateway provider"""
+    
+    def __init__(self, gateway_url: Optional[str] = None, gateway_key: Optional[str] = None, model: str = "gpt-4"):
+        self.gateway_url = gateway_url or os.getenv('WALMART_LLM_GATEWAY_URL')
+        self.gateway_key = gateway_key or os.getenv('WALMART_LLM_GATEWAY_KEY')
+        self.model = model
+        self.client = None
+        
+        if self.gateway_url and self.gateway_key:
+            try:
+                import requests
+                self.client = requests.Session()
+                self.client.headers.update({
+                    'Authorization': f'Bearer {self.gateway_key}',
+                    'Content-Type': 'application/json'
+                })
+            except ImportError:
+                logger.warning("requests package not installed. Install with: pip install requests")
+    
+    def validate_config(self) -> bool:
+        """Validate Walmart LLM Gateway configuration"""
+        return bool(self.gateway_url and self.gateway_key and self.client)
+    
+    async def generate(self, prompt: str, **kwargs) -> str:
+        """Generate response using Walmart LLM Gateway"""
+        if not self.validate_config():
+            raise ValueError("Walmart LLM Gateway provider not properly configured")
+        
+        try:
+            # In a real implementation, you would make the actual API call
+            # For now, return a simulated response
+            await asyncio.sleep(0.1)  # Simulate API delay
+            
+            # This is a mock response - replace with actual Walmart LLM Gateway call
+            # Actual implementation would look like:
+            # payload = {
+            #     "model": self.model,
+            #     "prompt": prompt,
+            #     "max_tokens": kwargs.get('max_tokens', 1000),
+            #     "temperature": kwargs.get('temperature', 0.7)
+            # }
+            # response = self.client.post(f"{self.gateway_url}/generate", json=payload)
+            # return response.json()['response']
+            
+            return f"[WalmartLLM-{self.model}] Mock response for: {prompt[:50]}..."
+            
+        except Exception as e:
+            logger.error(f"Walmart LLM Gateway API call failed: {e}")
+            raise
+
 class MockProvider(LLMProvider):
     """Mock provider for testing"""
     
@@ -124,6 +190,14 @@ class LLMManager:
     def _initialize_providers(self):
         """Initialize LLM providers based on environment configuration"""
         llm_config = self.env_config.get_llm_config()
+        
+        # Initialize Walmart LLM Gateway provider
+        if llm_config.get('walmart_llm_gateway_url') and llm_config.get('walmart_llm_gateway_key'):
+            self.providers['walmart_llm_gateway'] = WalmartLLMGatewayProvider(
+                gateway_url=llm_config['walmart_llm_gateway_url'],
+                gateway_key=llm_config['walmart_llm_gateway_key'],
+                model=llm_config.get('walmart_llm_model', 'gpt-4')
+            )
         
         # Initialize OpenAI provider
         if llm_config.get('openai_api_key'):
@@ -256,14 +330,14 @@ def reload_llm_manager():
 
 # Convenience functions for common operations
 async def generate_analysis(prompt: str, provider: Optional[str] = None, **kwargs) -> Dict[str, Any]:
-    """Convenience function for generating LLM analysis"""
+    """Convenience function for generating Agent LLM analysis - You are an Agent doing code change analysis"""
     manager = get_llm_manager()
     return await manager.generate_with_fallback(prompt, primary_provider=provider, **kwargs)
 
 async def analyze_code_changes(changes: Dict[str, Any], provider: Optional[str] = None) -> Dict[str, Any]:
-    """Analyze code changes using LLM"""
+    """You are an Agent doing code change analysis using LLM"""
     prompt = f"""
-    Analyze the following code changes for risk assessment:
+    You are an Agent doing analysis of the following code changes for risk assessment:
     
     Files changed: {changes.get('changed_files', [])}
     Additions: {changes.get('additions', 0)}
@@ -271,7 +345,7 @@ async def analyze_code_changes(changes: Dict[str, Any], provider: Optional[str] 
     Title: {changes.get('title', '')}
     Description: {changes.get('body', '')}
     
-    Please provide:
+    As an Agent, please provide:
     1. Risk level (low/medium/high)
     2. Affected modules
     3. Potential security concerns
@@ -283,14 +357,14 @@ async def analyze_code_changes(changes: Dict[str, Any], provider: Optional[str] 
     return await generate_analysis(prompt, provider)
 
 async def analyze_security_patterns(file_content: str, patterns: Dict[str, str], provider: Optional[str] = None) -> Dict[str, Any]:
-    """Analyze file content for security patterns"""
+    """You are an Agent doing security pattern analysis"""
     prompt = f"""
-    Analyze the following code for security vulnerabilities:
+    You are an Agent doing analysis of the following code for security vulnerabilities:
     
     Code:
     {file_content[:2000]}  # Limit content size
     
-    Check for these patterns:
+    As an Agent, check for these patterns:
     {patterns}
     
     Provide findings in JSON format with:

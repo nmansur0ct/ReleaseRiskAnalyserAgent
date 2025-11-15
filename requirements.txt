@@ -4,6 +4,9 @@ typing-extensions>=4.5.0
 click>=8.0.0
 python-dotenv>=1.0.0
 
+# HTTP client for API calls
+requests>=2.31.0
+
 # LangGraph and LangChain for agentic workflows
 langgraph>=0.0.55
 langchain>=0.1.0

@@ -11,7 +11,7 @@ from .plugin_framework import (
     BaseAgentPlugin, AgentMetadata, AgentInput, AgentOutput,
     AgentCapability, ExecutionMode
 )
-from .llm_integration import get_llm_manager, analyze_code_changes
+from .llm_integration import get_llm_manager as get_agent_llm_manager, analyze_code_changes
 
 class ChangeLogSummarizerPlugin(BaseAgentPlugin):
     """Enhanced Change Log Summarizer Agent Plugin"""
@@ -52,9 +52,9 @@ class ChangeLogSummarizerPlugin(BaseAgentPlugin):
             title = pr_data.get('title', '')
             body = pr_data.get('body', '')
             
-            # Analyze with LLM if configured
+            # Analyze with Agent LLM if configured
             if self.config.get('llm_provider'):
-                summary_result = await self._analyze_with_llm(pr_data)
+                summary_result = await self._analyze_with_agent_llm(pr_data)
                 if summary_result['confidence'] >= self.config.get('confidence_threshold', 0.7):
                     return self._create_output(summary_result, 'llm_primary', input_data.session_id, start_time)
             
@@ -70,21 +70,21 @@ class ChangeLogSummarizerPlugin(BaseAgentPlugin):
                 analysis_method="error"
             )
     
-    async def _analyze_with_llm(self, pr_data: Dict[str, Any]) -> Dict[str, Any]:
-        """LLM-powered analysis using environment-configured provider"""
+    async def _analyze_with_agent_llm(self, pr_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Agent LLM-powered analysis using environment-configured provider"""
         try:
-            # Use the new LLM integration with environment configuration
-            llm_manager = get_llm_manager()
+            # Use the new Agent LLM integration with environment configuration
+            llm_manager = get_agent_llm_manager()
             
             # Get provider from config or use environment default
             provider = self.config.get('llm_provider')
             
-            # Analyze using LLM
+            # Analyze using Agent LLM
             result = await analyze_code_changes(pr_data, provider)
             
             if result['success']:
-                # Parse the LLM response (assuming JSON format)
-                # In a real implementation, you'd parse the actual LLM response
+                # Parse the Agent LLM response (assuming JSON format)
+                # In a real implementation, you'd parse the actual Agent LLM response
                 changed_files = pr_data.get('changed_files', [])
                 additions = pr_data.get('additions', 0)
                 deletions = pr_data.get('deletions', 0)
@@ -125,16 +125,16 @@ class ChangeLogSummarizerPlugin(BaseAgentPlugin):
                     change_size = "small"
                 
                 return {
-                    'summary': f"LLM Analysis: Modified {len(changed_files)} files with {total_changes} total changes",
+                    'summary': f"Agent LLM Analysis: You are an Agent doing change analysis on {len(changed_files)} files with {total_changes} total changes",
                     'affected_modules': list(modules),
                     'change_size': change_size,
                     'risk_indicators': risk_indicators,
-                    'confidence': 0.9,  # Higher confidence for LLM analysis
+                    'confidence': 0.9,  # Higher confidence for Agent LLM analysis
                     'llm_provider': result['provider_used'],
                     'llm_response': result['response'][:200] + "..." if len(result['response']) > 200 else result['response']
                 }
             else:
-                # LLM failed, fall back to heuristic analysis
+                # Agent LLM failed, fall back to heuristic analysis
                 return await self._analyze_with_heuristics(pr_data)
                 
         except Exception as e:

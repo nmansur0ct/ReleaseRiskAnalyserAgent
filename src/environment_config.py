@@ -108,8 +108,11 @@ class EnvironmentConfig:
     def get_llm_config(self) -> Dict[str, Any]:
         """Get LLM-specific configuration"""
         return {
-            'provider': self.get('LLM_PROVIDER', 'openai'),
-            'fallback_provider': self.get('FALLBACK_LLM_PROVIDER', 'anthropic'),
+            'provider': self.get('LLM_PROVIDER', 'walmart_llm_gateway'),
+            'fallback_provider': self.get('FALLBACK_LLM_PROVIDER', 'openai'),
+            'walmart_llm_gateway_url': self.get('WALMART_LLM_GATEWAY_URL'),
+            'walmart_llm_gateway_key': self.get('WALMART_LLM_GATEWAY_KEY'),
+            'walmart_llm_model': self.get('WALMART_LLM_MODEL', 'gpt-4'),
             'openai_api_key': self.get('OPENAI_API_KEY'),
             'openai_model': self.get('OPENAI_MODEL', 'gpt-4'),
             'anthropic_api_key': self.get('ANTHROPIC_API_KEY'),
@@ -124,6 +127,14 @@ class EnvironmentConfig:
             'slack_webhook_url': self.get('SLACK_WEBHOOK_URL'),
             'email_smtp_server': self.get('EMAIL_SMTP_SERVER', 'smtp.company.com'),
             'email_from_address': self.get('EMAIL_FROM_ADDRESS', 'noreply@company.com')
+        }
+    
+    def get_git_config(self) -> Dict[str, Any]:
+        """Get Git integration configuration"""
+        return {
+            'access_token': self.get('GIT_ACCESS_TOKEN'),
+            'default_repo_url': self.get('GIT_DEFAULT_REPO_URL'),
+            'api_base_url': self.get('GIT_API_BASE_URL', 'https://api.github.com')
         }
     
     def get_database_config(self) -> Dict[str, Any]:
