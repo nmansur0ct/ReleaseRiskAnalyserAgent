@@ -333,6 +333,6 @@ class FinalAnalysisResult(BaseModel):
     @property
     def decision_summary(self) -> str:
         """Get a concise decision summary."""
-        status = "✅ GO" if self.decision.go else "❌ NO-GO"
+        status = "GO" if self.decision.go else "NO-GO"
         confidence_level = "High" if self.is_high_confidence else "Medium" if self.overall_confidence >= 0.5 else "Low"
         return f"{status} (Risk: {self.decision.risk_score}/100, Confidence: {confidence_level})"

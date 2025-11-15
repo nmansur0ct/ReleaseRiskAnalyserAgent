@@ -31,81 +31,93 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 async def fetch_repository_prs(repo_url, pr_limit=5):
-
     """ 
-    Fetch actual PRs from the specified repository
+    Fetch ONLY actual PRs from the specified repository - NO mock or simulated data
+    Returns empty list if no real PRs found
     """
-    print("\n Git Integration - PR Fetching")
+    print("\nGit Integration - PR Fetching")
     print("=" * 60)
     
-    print(f" Analyzing repository: {repo_url}")
-    print(f" PR fetch limit: {pr_limit}")
+    print(f"Analyzing repository: {repo_url}")
+    print(f"PR fetch limit: {pr_limit}")
+    print(f"Data source: REAL PULL REQUESTS ONLY - No simulated or mock data")
     
     try:
         from git_integration import get_git_manager
         git_manager = get_git_manager()
         
-        print(" Available Git Providers:")
+        print("Available Git Providers:")
         for provider_name in git_manager.providers.keys():
-            print(f"   {provider_name}")
+            print(f"  {provider_name}")
         
         # Get configuration
         env_config = get_env_config()
         git_config = env_config.get_git_config()
         
         if not git_config.get('access_token'):
-            print(" No Git access token configured")
-            print(" Please set GIT_ACCESS_TOKEN environment variable")
+            print("No Git access token configured")
+            print("Please set GIT_ACCESS_TOKEN environment variable")
             return []
         
-        print(f" Using Git access token...")
+        print(f"Using Git access token...")
         access_token = git_config.get('access_token')
-        print(f" Token configured: {access_token[:20]}...")
+        print(f"Token configured: {access_token[:20]}...")
         
         try:
-            # Fetch PRs from the repository
+            # Fetch ONLY REAL PRs from the repository - NEVER generate mock data
             git_provider = git_manager.get_provider("github")
             if not git_provider:
-                print(" GitHub provider not available")
+                print("GitHub provider not available")
                 return []
             
             prs = await git_provider.get_pull_requests(repo_url, limit=pr_limit)
+            
+            # CRITICAL: Verify these are real PRs with actual PR numbers and URLs
+            if not prs:
+                return []
+            
+            # Filter out any invalid/mock entries - must have number and url
+            verified_prs = [pr for pr in prs if pr.get('number') and pr.get('url')]
+            
             repo_name = repo_url.split('/')[-1].replace('.git', '')
-            print(f" Found {len(prs)} pull requests from {repo_name} repository")
+            print(f"Found {len(verified_prs)} verified pull requests from {repo_name} repository")
+            print(f"Verification: All PRs have valid PR numbers and URLs from Git provider")
             
             # Display PRs for verification
-            for i, pr in enumerate(prs[:3], 1):  # Show first 3 PRs
+            for i, pr in enumerate(verified_prs[:3], 1):  # Show first 3 PRs
                 print(f"\n  {i}. PR #{pr['number']}: {pr['title']}")
                 print(f"      Author: {pr['author']}")
                 print(f"      Changes: +{pr['additions']} -{pr['deletions']}")
                 print(f"      Files: {len(pr.get('changed_files', []))}")
-                print(f"      URL: {pr.get('url', 'N/A')}")
+                print(f"      URL: {pr.get('url')}")
             
-            return prs
+            return verified_prs
             
         except Exception as e:
-            print(f" Failed to fetch PRs: {e}")
-            print(f"  Error details: {str(e)}")
+            print(f"Failed to fetch PRs: {e}")
+            print(f"Error details: {str(e)}")
             return []
             
     except ImportError as e:
-        print(f" Git integration module not available: {e}")
-        print(" Please ensure git_integration module is installed")
+        print(f"Git integration module not available: {e}")
+        print("Please ensure git_integration module is installed")
         return []
 
 async def simple_plugin_demo(repo_url, pr_limit=5):
     """ 
-    Enhanced demonstration of the plugin architecture with comprehensive LLM evaluation for each PR
+    Enhanced demonstration of the plugin architecture with comprehensive LLM evaluation for REAL PRs only
+    IMPORTANT: This function processes ONLY actual PRs from repositories - NO mock/simulated data
     """
     
-    print(" Enhanced LLM-Powered PR Analysis Framework")
+    print("Enhanced LLM-Powered PR Analysis Framework")
     print("="*80)
+    print("Data Policy: REAL PULL REQUESTS ONLY - No mock or simulated data generated")
     
-    print(f" Target Repository: {repo_url}")
+    print(f"Target Repository: {repo_url}")
     print("="*80)
     
     # Demonstrate environment configuration
-    print("\n Environment Configuration Status:")
+    print("\nEnvironment Configuration Status:")
     print("-" * 40)
     
     env_config = get_env_config()
@@ -114,10 +126,10 @@ async def simple_plugin_demo(repo_url, pr_limit=5):
     
     print(f"Agent LLM Provider: {llm_config['provider']}")
     print(f"Fallback Provider: {llm_config['fallback_provider']}")
-    print(f"Walmart Agent LLM Gateway: {' Configured' if llm_config.get('walmart_llm_gateway_key') else '  Not configured'}")
+    print(f"Walmart Agent LLM Gateway: {'Configured' if llm_config.get('walmart_llm_gateway_key') else 'Not configured'}")
     print(f"OpenAI Configured: {'Yes' if llm_config['openai_api_key'] else 'No (using env default)'}")
     print(f"Anthropic Configured: {'Yes' if llm_config['anthropic_api_key'] else 'No (using env default)'}")
-    print(f"Git Access Token: {' Configured' if git_config.get('access_token') else ' Not configured'}")
+    print(f"Git Access Token: {'Configured' if git_config.get('access_token') else 'Not configured'}")
     
     # Check Agent LLM manager
     llm_manager = get_llm_manager()
@@ -133,16 +145,16 @@ async def simple_plugin_demo(repo_url, pr_limit=5):
         git_manager = get_git_manager()
         print(f"Git Providers: {list(git_manager.providers.keys())}")
     
-    # Fetch actual PRs from the repository
-    print(f"\n FETCHING ACTUAL PRS FROM REPOSITORY")
+    # Fetch actual PRs from the repository - NEVER generate fake/mock PRs
+    print(f"\nFETCHING ACTUAL PRS FROM REPOSITORY")
     print("=" * 60)
     git_prs = await fetch_repository_prs(repo_url, pr_limit)
     
-    # Check if we have real PRs to analyze
+    # Check if we have real PRs to analyze - proceed ONLY if real PRs exist
     if git_prs and len(git_prs) > 0:
         repo_name = repo_url.split('/')[-1].replace('.git', '')
-        print(f"\n FOUND {len(git_prs)} REAL PRS FROM {repo_name.upper()} REPOSITORY")
-        print(f" Analyzing each PR with comprehensive LLM evaluation...")
+        print(f"\nFOUND {len(git_prs)} REAL PRS FROM {repo_name.upper()} REPOSITORY")
+        print(f"Analyzing each PR with comprehensive LLM evaluation...")
         
         # Analyze each PR individually
         pr_results = []
@@ -160,32 +172,33 @@ async def simple_plugin_demo(repo_url, pr_limit=5):
         await generate_overall_repository_verdict(git_prs, pr_results, repo_url)
         
     else:
-        # No PRs found - notify user
+        # No PRs found - notify user (NO mock PRs will be generated)
         repo_name = repo_url.split('/')[-1].replace('.git', '')
-        print(f"\n NO PULL REQUESTS FOUND IN {repo_name.upper()} REPOSITORY")
+        print(f"\nNO PULL REQUESTS FOUND IN {repo_name.upper()} REPOSITORY")
         print("="*60)
-        print(f" Repository Analysis Summary:")
-        print(f"    Repository: {repo_url}")
-        print(f"    Total PRs Found: 0")
-        print(f"    Search Period: All time")
-        print(f"    Search Limit: {pr_limit} PRs")
+        print(f"Repository Analysis Summary:")
+        print(f"   Repository: {repo_url}")
+        print(f"   Total PRs Found: 0")
+        print(f"   Search Period: All time")
+        print(f"   Search Limit: {pr_limit} PRs")
+        print(f"   Note: NO mock or simulated PRs generated - real PRs only")
         print()
-        print(f" POSSIBLE REASONS:")
-        print(f"   • Repository has no pull requests")
-        print(f"   • All PRs are already merged/closed")
-        print(f"   • Access permissions may be limited")
-        print(f"   • Repository is private and token access is restricted")
+        print(f"POSSIBLE REASONS:")
+        print(f"  - Repository has no pull requests")
+        print(f"  - All PRs are already merged/closed")
+        print(f"  - Access permissions may be limited")
+        print(f"  - Repository is private and token access is restricted")
         print()
-        print(f" RECOMMENDATIONS:")
-        print(f"   • Check repository URL is correct")
-        print(f"   • Verify Git access token has proper permissions")
-        print(f"   • Try with a different repository that has open PRs")
-        print(f"   • Contact repository owner for access if needed")
+        print(f"RECOMMENDATIONS:")
+        print(f"  - Check repository URL is correct")
+        print(f"  - Verify Git access token has proper permissions")
+        print(f"  - Try with a different repository that has open PRs")
+        print(f"  - Contact repository owner for access if needed")
         
         # Generate LLM-powered summary of the no-PR situation
         await generate_no_pr_llm_summary(repo_url)
     
-    print(f"\n ANALYSIS COMPLETE!")
+    print(f"\nANALYSIS COMPLETE!")
     print("="*80)
 
 async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_index: int, total_prs: int):
@@ -200,15 +213,15 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
     pr_deletions = pr_data.get('deletions', 0)
     pr_files = pr_data.get('changed_files', [])
     
-    print(f" PR #{pr_number}: {pr_title}")
-    print(f" Author: {pr_author}")
-    print(f" Changes: +{pr_additions} -{pr_deletions} lines")
-    print(f" Files Modified: {len(pr_files)}")
-    print(f"⏱  Analysis Progress: {pr_index}/{total_prs}")
+    print(f"PR #{pr_number}: {pr_title}")
+    print(f"Author: {pr_author}")
+    print(f"Changes: +{pr_additions} -{pr_deletions} lines")
+    print(f"Files Modified: {len(pr_files)}")
+    print(f"Analysis Progress: {pr_index}/{total_prs}")
     print()
     
     # Perform detailed plugin analysis for this specific PR
-    print(f" EXECUTING 5-PLUGIN LLM ANALYSIS...")
+    print(f"EXECUTING 5-PLUGIN LLM ANALYSIS...")
     print("-" * 60)
     
     # Plugin analyses with actual PR data
@@ -275,12 +288,12 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
     # Generate LLM-powered PR verdict
     pr_verdict = await generate_pr_verdict_with_llm(pr_data, plugin_results, repo_url)
     
-    print(f"\n PR #{pr_number} FINAL VERDICT:")
+    print(f"\nPR #{pr_number} FINAL VERDICT:")
     print("=" * 50)
-    print(f" Recommendation: {pr_verdict['recommendation']}")
-    print(f" Confidence: {pr_verdict['confidence']}%")
-    print(f"  Risk Level: {pr_verdict['risk_level']}")
-    print(f" Overall Score: {pr_verdict['score']}/100")
+    print(f"Recommendation: {pr_verdict['recommendation']}")
+    print(f"Confidence: {pr_verdict['confidence']}%")
+    print(f"Risk Level: {pr_verdict['risk_level']}")
+    print(f"Overall Score: {pr_verdict['score']}/100")
     print()
     
     return {
@@ -318,20 +331,31 @@ async def generate_pr_verdict_with_llm(pr_data: Dict[str, Any], plugin_results: 
         """
         
         prompt = f"""
-        You are an AI Agent specialized in software release risk assessment.
+        You are an AI Agent specialized in software release risk assessment. Analyze ONLY the provided data.
         
-        Please provide a final verdict for this pull request based on the comprehensive analysis:
+        IMPORTANT INSTRUCTIONS:
+        - Base your analysis ONLY on the factual data provided below
+        - Do NOT make assumptions about code quality not evidenced in the data
+        - Do NOT hallucinate or infer information not present in the analysis
+        - Be conservative and evidence-based in your assessment
         
+        Pull Request Data to Analyze:
         {analysis_summary}
         
-        Return a JSON response with:
-        1. "recommendation": "APPROVE", "CONDITIONAL", or "REJECT"
-        2. "confidence": percentage (0-100)
-        3. "risk_level": "LOW", "MEDIUM", or "HIGH"
-        4. "score": overall quality score (0-100)
-        5. "reasoning": brief explanation in business terms
+        Provide a verdict in JSON format with these exact fields:
+        1. "recommendation": Must be exactly one of: "APPROVE", "CONDITIONAL", or "REJECT"
+        2. "confidence": Integer between 0-100 representing confidence level
+        3. "risk_level": Must be exactly one of: "LOW", "MEDIUM", or "HIGH"
+        4. "score": Integer between 0-100 for overall quality assessment
+        5. "reasoning": Brief factual explanation (2-3 sentences) based ONLY on provided metrics
         
-        Focus on providing clear, actionable guidance for release decisions.
+        Base your decision strictly on:
+        - Line changes: Large changes (>500 lines) = higher risk
+        - Security issues found: Any issues = increased scrutiny
+        - Compliance: Must pass all standards
+        - Impact score: Higher scores need more careful review
+        
+        Provide clear, actionable, evidence-based guidance.
         """
         
         llm_manager = get_llm_manager()
@@ -407,14 +431,14 @@ async def generate_overall_repository_verdict(all_prs: list, pr_results: list, r
     print(f"  Conditional PRs: {total_conditional}")
     print(f" Rejected PRs: {total_rejected}")
     print()
-    print(f" RISK DISTRIBUTION:")
-    print(f"   🟢 Low Risk: {low_risk_count} PRs")
-    print(f"   🟡 Medium Risk: {medium_risk_count} PRs")
-    print(f"    High Risk: {high_risk_count} PRs")
+    print(f"RISK DISTRIBUTION:")
+    print(f"  Low Risk: {low_risk_count} PRs")
+    print(f"  Medium Risk: {medium_risk_count} PRs")
+    print(f"  High Risk: {high_risk_count} PRs")
     print()
-    print(f" QUALITY METRICS:")
-    print(f"    Average Confidence: {avg_confidence:.1f}%")
-    print(f"    Average Quality Score: {avg_score:.1f}/100")
+    print(f"QUALITY METRICS:")
+    print(f"  Average Confidence: {avg_confidence:.1f}%")
+    print(f"  Average Quality Score: {avg_score:.1f}/100")
     print()
     
     # Generate LLM-powered overall verdict
@@ -458,21 +482,28 @@ async def generate_repository_llm_summary(repo_name: str, all_prs: list, pr_resu
         """ + "\n".join(pr_summaries)
         
         prompt = f"""
-        You are an AI Agent specializing in enterprise software release management and repository health assessment.
+        You are an AI Agent specializing in enterprise software release management. Analyze ONLY the provided data.
         
-        Please provide a comprehensive executive summary for this repository analysis:
+        CRITICAL INSTRUCTIONS:
+        - Base your assessment STRICTLY on the factual metrics provided below
+        - Do NOT make assumptions or inferences beyond the data
+        - Do NOT hallucinate information about code quality, team practices, or deployment readiness
+        - Be conservative and evidence-based in all statements
+        - Cite specific numbers from the data in your analysis
         
+        Repository Analysis Data:
         {repository_context}
         
-        Create a business-focused summary that includes:
-        1. Overall repository health assessment
-        2. Release readiness evaluation
-        3. Key risks and recommendations
-        4. Strategic guidance for development teams
-        5. Next steps and action items
+        Provide a comprehensive executive summary that includes:
+        1. Overall repository health (based ONLY on provided quality scores and PR counts)
+        2. Release readiness (based ONLY on approval percentages and risk distribution)
+        3. Key risks (based ONLY on high-risk PR count and rejection rate)
+        4. Data-driven recommendations (referencing specific metrics)
+        5. Next steps (logical actions based on the numbers)
         
-        Use professional language suitable for technical leadership and business stakeholders.
-        Focus on actionable insights and clear recommendations.
+        Use professional language suitable for technical leadership.
+        Every statement must be traceable to the provided data.
+        If data is insufficient for a conclusion, state that explicitly.
         """
         
         llm_manager = get_llm_manager()
@@ -515,38 +546,38 @@ async def generate_repository_llm_summary(repo_name: str, all_prs: list, pr_resu
             release_readiness = "READY" if metrics['total_rejected'] == 0 and metrics['risk_distribution']['high'] == 0 else "CONDITIONAL"
             
             fallback_summary = f"""
- EXECUTIVE REPOSITORY ASSESSMENT
+EXECUTIVE REPOSITORY ASSESSMENT
 ====================================================
 
- REPOSITORY HEALTH: {overall_health}
-   Repository {repo_name} shows {overall_health.lower().replace('_', ' ')} health metrics with {metrics['avg_score']:.1f}/100 average quality score
-   across {len(all_prs)} analyzed pull requests.
+REPOSITORY HEALTH: {overall_health}
+  Repository {repo_name} shows {overall_health.lower().replace('_', ' ')} health metrics with {metrics['avg_score']:.1f}/100 average quality score
+  across {len(all_prs)} analyzed pull requests.
 
- RELEASE READINESS: {release_readiness}
-   • {metrics['total_approved']} PRs approved for immediate deployment
-   • {metrics['total_conditional']} PRs require additional review
-   • {metrics['total_rejected']} PRs blocked from release
-   • {metrics['avg_confidence']:.1f}% average assessment confidence
+RELEASE READINESS: {release_readiness}
+  - {metrics['total_approved']} PRs approved for immediate deployment
+  - {metrics['total_conditional']} PRs require additional review
+  - {metrics['total_rejected']} PRs blocked from release
+  - {metrics['avg_confidence']:.1f}% average assessment confidence
 
-  RISK ASSESSMENT:
-   • Low Risk: {metrics['risk_distribution']['low']} PRs (safe for production)
-   • Medium Risk: {metrics['risk_distribution']['medium']} PRs (require monitoring)
-   • High Risk: {metrics['risk_distribution']['high']} PRs (need immediate attention)
+RISK ASSESSMENT:
+  - Low Risk: {metrics['risk_distribution']['low']} PRs (safe for production)
+  - Medium Risk: {metrics['risk_distribution']['medium']} PRs (require monitoring)
+  - High Risk: {metrics['risk_distribution']['high']} PRs (need immediate attention)
 
- STRATEGIC RECOMMENDATIONS:
-   • {'Continue current development practices - excellent quality maintained' if overall_health == 'EXCELLENT' 
-     else 'Focus on code quality improvements and additional testing' if overall_health == 'GOOD'
-     else 'Immediate attention required - implement stricter review processes'}
-   • {'All PRs ready for production deployment' if release_readiness == 'READY'
-     else 'Address conditional PRs before mass deployment'}
-   • Maintain current security and compliance standards
-   • Continue automated quality checks and risk assessment
+STRATEGIC RECOMMENDATIONS:
+  - {'Continue current development practices - excellent quality maintained' if overall_health == 'EXCELLENT' 
+    else 'Focus on code quality improvements and additional testing' if overall_health == 'GOOD'
+    else 'Immediate attention required - implement stricter review processes'}
+  - {'All PRs ready for production deployment' if release_readiness == 'READY'
+    else 'Address conditional PRs before mass deployment'}
+  - Maintain current security and compliance standards
+  - Continue automated quality checks and risk assessment
 
- NEXT STEPS:
-   1. {'Deploy approved PRs to production' if metrics['total_approved'] > 0 else 'Review conditional PRs first'}
-   2. {'Address conditional approvals' if metrics['total_conditional'] > 0 else 'Monitor deployment metrics'}
-   3. Monitor post-deployment metrics and user feedback
-   4. Continue regular security and compliance audits
+NEXT STEPS:
+  1. {'Deploy approved PRs to production' if metrics['total_approved'] > 0 else 'Review conditional PRs first'}
+  2. {'Address conditional approvals' if metrics['total_conditional'] > 0 else 'Monitor deployment metrics'}
+  3. Monitor post-deployment metrics and user feedback
+  4. Continue regular security and compliance audits
             """
             
             print(fallback_summary)
@@ -585,17 +616,22 @@ async def generate_no_pr_llm_summary(repo_url: str):
         repo_name = repo_url.split('/')[-1].replace('.git', '')
         
         prompt = f"""
-        You are an AI Agent specializing in repository analysis and development workflow assessment.
+        You are an AI Agent specializing in repository analysis. Provide FACTUAL assessment only.
         
-        The repository '{repo_name}' at {repo_url} contains no open pull requests.
+        STRICT INSTRUCTIONS:
+        - The ONLY known fact is: Repository '{repo_name}' at {repo_url} has NO open pull requests
+        - Do NOT assume anything about code quality, team size, or development practices
+        - Do NOT hallucinate reasons or make unfounded conclusions
+        - Present POSSIBLE scenarios, not definitive statements
+        - Be neutral and evidence-based
         
-        Please provide a professional assessment that covers:
-        1. Possible reasons for no PRs (positive and concerning scenarios)
-        2. Recommendations for repository health evaluation
-        3. Next steps for development teams
-        4. Best practices for maintaining active development workflows
+        Provide a brief professional assessment covering:
+        1. Possible reasons for no PRs (list 3-4 realistic scenarios, both positive and neutral)
+        2. Factual next steps to understand repository status (e.g., check commit history)
+        3. General best practices for PR workflows (generic advice, not specific to this repo)
         
-        Keep the tone professional but supportive, acknowledging this could be normal or indicate issues.
+        Keep tone professional and neutral. Maximum 8-10 sentences.
+        Acknowledge explicitly that without more data, conclusions are speculative.
         """
         
         llm_manager = get_llm_manager()
@@ -630,32 +666,30 @@ async def generate_no_pr_llm_summary(repo_url: str):
             print("=" * 50)
             
             fallback_analysis = f"""
- REPOSITORY ANALYSIS: No Active Pull Requests
+REPOSITORY ANALYSIS: No Active Pull Requests
    
- POSITIVE SCENARIOS:
-   • Repository may be in stable state with recent releases
-   • Development team working in feature branches not yet ready for PR
-   • Recently completed major release cycle
-   • Well-maintained codebase requiring minimal changes
+POSSIBLE SCENARIOS:
+  - Repository may be in stable state with recent releases
+  - Development team working in feature branches not yet ready for PR
+  - Recently completed major release cycle
+  - Well-maintained codebase requiring minimal changes
+  - Development activity may have slowed or moved elsewhere
+  - PR workflow might not be established or followed
+  - Repository could be archived or deprecated
+  - Access permissions may be limiting PR visibility
 
-  AREAS TO INVESTIGATE:
-   • Development activity may have slowed or moved elsewhere
-   • PR workflow might not be established or followed
-   • Repository could be archived or deprecated
-   • Access permissions may be limiting PR visibility
+RECOMMENDATIONS:
+  - Check recent commit history for development activity
+  - Verify repository is actively maintained
+  - Review branch structure for ongoing development
+  - Confirm PR workflow is properly configured
+  - Contact repository maintainers if needed
 
- RECOMMENDATIONS:
-   • Check recent commit history for development activity
-   • Verify repository is actively maintained
-   • Review branch structure for ongoing development
-   • Confirm PR workflow is properly configured
-   • Contact repository maintainers if needed
-
- NEXT STEPS:
-   • Analyze commit frequency and contributors
-   • Check for alternative development workflows
-   • Verify repository purpose and status
-   • Consider setting up regular development practices
+NEXT STEPS:
+  - Analyze commit frequency and contributors
+  - Check for alternative development workflows
+  - Verify repository purpose and status
+  - Consider setting up regular development practices
             """
             
             print(fallback_analysis)
@@ -1297,8 +1331,8 @@ async def analyze_multiple_repositories(repo_urls: list, pr_limit: int):
         repo_result = await analyze_single_repository(repo_url, pr_limit)
         all_results.append(repo_result)
     
-    # Generate comprehensive summary report
-    await generate_comprehensive_summary_report(all_results)
+    # Generate comprehensive summary report and save to file
+    await generate_comprehensive_summary_report(all_results, repo_urls)
 
 async def analyze_single_repository(repo_url: str, pr_limit: int):
 
@@ -1377,27 +1411,46 @@ async def analyze_single_repository(repo_url: str, pr_limit: int):
         'status': 'ANALYZED'
     }
 
-async def generate_comprehensive_summary_report(all_results: list):
+async def generate_comprehensive_summary_report(all_results: list, repo_urls: list = None):
 
     """
-    Generate comprehensive summary report for all analyzed repositories"""
-    print(f"\n\n{'='*80}")
-    print(" COMPREHENSIVE MULTI-REPOSITORY SUMMARY REPORT")
-    print(f"{'='*80}")
+    Generate comprehensive summary report for all analyzed repositories and save to file"""
+    from datetime import datetime
+    from io import StringIO
+    
+    # Create string buffer to capture report
+    report_buffer = StringIO()
+    
+    def print_and_capture(text="", end="\n"):
+        """Print to console and capture to buffer"""
+        print(text, end=end)
+        report_buffer.write(text + end)
+    
+    print_and_capture(f"\n\n{'='*80}")
+    print_and_capture(" COMPREHENSIVE MULTI-REPOSITORY SUMMARY REPORT")
+    print_and_capture(f"{'='*80}")
+    print_and_capture(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # Overall statistics
     total_repos = len(all_results)
     repos_with_prs = sum(1 for r in all_results if r['status'] == 'ANALYZED')
     total_prs_analyzed = sum(r['prs_found'] for r in all_results)
     
-    print(f"\n OVERALL STATISTICS:")
-    print("-" * 50)
-    print(f"Total Repositories Analyzed: {total_repos}")
-    print(f"Repositories with PRs: {repos_with_prs}")
-    print(f"Total PRs Analyzed: {total_prs_analyzed}")
+    print_and_capture(f"\nOVERALL STATISTICS:")
+    print_and_capture("-" * 50)
+    print_and_capture(f"Total Repositories Analyzed: {total_repos}")
+    print_and_capture(f"Repositories with PRs: {repos_with_prs}")
+    print_and_capture(f"Total PRs Analyzed: {total_prs_analyzed}")
     
     if repos_with_prs == 0:
-        print(f"\n  No pull requests found in any repository.")
+        print_and_capture(f"\nNo pull requests found in any repository.")
+        
+        # Save empty report
+        report_content = report_buffer.getvalue()
+        if repo_urls and len(repo_urls) > 0:
+            repo_name = repo_urls[0].split('/')[-1].replace('.git', '')
+            filepath = save_report_to_file(report_content, repo_name, "multi_repo_summary")
+            print(f"\nReport saved to: {filepath}")
         return
     
     # Aggregate metrics across all repositories
@@ -1413,40 +1466,40 @@ async def generate_comprehensive_summary_report(all_results: list):
     all_medium_risk = sum(r['metrics']['risk_distribution']['medium'] for r in analyzed_repos)
     all_high_risk = sum(r['metrics']['risk_distribution']['high'] for r in analyzed_repos)
     
-    print(f"\n AGGREGATE PR VERDICTS:")
-    print("-" * 50)
-    print(f" Approved PRs: {all_approved} ({all_approved/total_prs_analyzed*100:.1f}%)")
-    print(f"  Conditional PRs: {all_conditional} ({all_conditional/total_prs_analyzed*100:.1f}%)")
-    print(f" Rejected PRs: {all_rejected} ({all_rejected/total_prs_analyzed*100:.1f}%)")
+    print_and_capture(f"\nAGGREGATE PR VERDICTS:")
+    print_and_capture("-" * 50)
+    print_and_capture(f"Approved PRs: {all_approved} ({all_approved/total_prs_analyzed*100:.1f}%)")
+    print_and_capture(f"Conditional PRs: {all_conditional} ({all_conditional/total_prs_analyzed*100:.1f}%)")
+    print_and_capture(f"Rejected PRs: {all_rejected} ({all_rejected/total_prs_analyzed*100:.1f}%)")
     
-    print(f"\n AGGREGATE RISK DISTRIBUTION:")
-    print("-" * 50)
-    print(f"🟢 Low Risk: {all_low_risk} PRs ({all_low_risk/total_prs_analyzed*100:.1f}%)")
-    print(f"🟡 Medium Risk: {all_medium_risk} PRs ({all_medium_risk/total_prs_analyzed*100:.1f}%)")
-    print(f" High Risk: {all_high_risk} PRs ({all_high_risk/total_prs_analyzed*100:.1f}%)")
+    print_and_capture(f"\nAGGREGATE RISK DISTRIBUTION:")
+    print_and_capture("-" * 50)
+    print_and_capture(f"Low Risk: {all_low_risk} PRs ({all_low_risk/total_prs_analyzed*100:.1f}%)")
+    print_and_capture(f"Medium Risk: {all_medium_risk} PRs ({all_medium_risk/total_prs_analyzed*100:.1f}%)")
+    print_and_capture(f"High Risk: {all_high_risk} PRs ({all_high_risk/total_prs_analyzed*100:.1f}%)")
     
-    print(f"\n AGGREGATE QUALITY METRICS:")
-    print("-" * 50)
-    print(f" Average Confidence: {overall_avg_confidence:.1f}%")
-    print(f" Average Quality Score: {overall_avg_score:.1f}/100")
+    print_and_capture(f"\nAGGREGATE QUALITY METRICS:")
+    print_and_capture("-" * 50)
+    print_and_capture(f"Average Confidence: {overall_avg_confidence:.1f}%")
+    print_and_capture(f"Average Quality Score: {overall_avg_score:.1f}/100")
     
     # Per-repository breakdown
-    print(f"\n\n{'='*80}")
-    print(" PER-REPOSITORY BREAKDOWN")
-    print(f"{'='*80}")
+    print_and_capture(f"\n\n{'='*80}")
+    print_and_capture(" PER-REPOSITORY BREAKDOWN")
+    print_and_capture(f"{'='*80}")
     
     for idx, result in enumerate(all_results, 1):
-        print(f"\n{idx}. Repository: {result['repo_name']}")
-        print(f"    URL: {result['repo_url']}")
-        print(f"    PRs Found: {result['prs_found']}")
+        print_and_capture(f"\n{idx}. Repository: {result['repo_name']}")
+        print_and_capture(f"    URL: {result['repo_url']}")
+        print_and_capture(f"    PRs Found: {result['prs_found']}")
         
         if result['status'] == 'ANALYZED':
             metrics = result['metrics']
-            print(f"    Approved: {metrics['total_approved']},   Conditional: {metrics['total_conditional']},  Rejected: {metrics['total_rejected']}")
-            print(f"    Confidence: {metrics['avg_confidence']:.1f}%, Score: {metrics['avg_score']:.1f}/100")
-            print(f"    Risk: 🟢{metrics['risk_distribution']['low']} 🟡{metrics['risk_distribution']['medium']} {metrics['risk_distribution']['high']}")
+            print_and_capture(f"    Approved: {metrics['total_approved']}, Conditional: {metrics['total_conditional']}, Rejected: {metrics['total_rejected']}")
+            print_and_capture(f"    Confidence: {metrics['avg_confidence']:.1f}%, Score: {metrics['avg_score']:.1f}/100")
+            print_and_capture(f"    Risk: Low:{metrics['risk_distribution']['low']} Med:{metrics['risk_distribution']['medium']} High:{metrics['risk_distribution']['high']}")
         else:
-            print(f"     Status: No PRs found")
+            print_and_capture(f"    Status: No PRs found")
     
     # Generate LLM-powered executive summary
     await generate_multi_repo_llm_summary(all_results, {
@@ -1464,9 +1517,19 @@ async def generate_comprehensive_summary_report(all_results: list):
         }
     })
     
-    print(f"\n{'='*80}")
-    print(" MULTI-REPOSITORY ANALYSIS COMPLETE!")
-    print(f"{'='*80}")
+    print_and_capture(f"\n{'='*80}")
+    print_and_capture(" MULTI-REPOSITORY ANALYSIS COMPLETE!")
+    print_and_capture(f"{'='*80}")
+    
+    # Save comprehensive report to file
+    report_content = report_buffer.getvalue()
+    if repo_urls and len(repo_urls) > 0:
+        repo_name = "multi_repo" if len(repo_urls) > 1 else repo_urls[0].split('/')[-1].replace('.git', '')
+        filepath = save_report_to_file(report_content, repo_name, "comprehensive_summary")
+        print(f"\nReport saved to: {filepath}")
+    else:
+        filepath = save_report_to_file(report_content, "analysis", "comprehensive_summary")
+        print(f"\nReport saved to: {filepath}")
 
 async def generate_multi_repo_llm_summary(all_results: list, aggregate_metrics: dict):
 
@@ -1499,21 +1562,29 @@ async def generate_multi_repo_llm_summary(all_results: list, aggregate_metrics: 
     """ + "\n    ".join(repo_summaries)
     
     prompt = f"""
-    You are an AI Agent specializing in enterprise software release management across multiple repositories.
+    You are an AI Agent specializing in software release risk assessment. Analyze ONLY the provided data.
     
-    Please provide a comprehensive executive summary for this multi-repository analysis:
+    CRITICAL INSTRUCTIONS:
+    - Base ALL statements strictly on the factual metrics provided below
+    - Do NOT make assumptions about development practices, team capabilities, or organizational readiness
+    - Do NOT hallucinate information not present in the data
+    - Cite specific numbers and percentages from the data
+    - Be conservative and evidence-based in all assessments
+    - If data is insufficient for a conclusion, state that explicitly
     
+    Multi-Repository Analysis Data:
     {context}
     
-    Create a business-focused summary that includes:
-    1. Overall portfolio health assessment
-    2. Cross-repository risk analysis
-    3. Key findings and patterns across repositories
-    4. Strategic recommendations for the development organization
-    5. Priority actions and next steps
+    Provide a comprehensive executive summary that includes:
+    1. Portfolio health (based strictly on provided quality scores and approval rates)
+    2. Risk analysis (based strictly on risk distribution numbers)
+    3. Key findings (patterns visible in the numerical data only)
+    4. Data-driven recommendations (logical next steps based on the metrics)
+    5. Priority actions (derived from high-risk PR counts and rejection rates)
     
-    Use professional language suitable for technical leadership and executive stakeholders.
-    Focus on actionable insights and strategic guidance.
+    Use professional language suitable for technical leadership.
+    Every statement must be traceable to specific data points provided.
+    Maximum 12-15 sentences. Be concise and factual.
     """
     
     llm_manager = get_llm_manager()
@@ -1544,28 +1615,59 @@ async def generate_multi_repo_llm_summary(all_results: list, aggregate_metrics: 
         overall_health = "EXCELLENT" if aggregate_metrics['avg_score'] >= 85 else "GOOD" if aggregate_metrics['avg_score'] >= 70 else "NEEDS_ATTENTION"
         
         print(f"\n PORTFOLIO HEALTH: {overall_health}")
-        print(f"   Analyzed {aggregate_metrics['total_repos']} repositories with {aggregate_metrics['total_prs']} total pull requests")
-        print(f"   Overall quality score: {aggregate_metrics['avg_score']:.1f}/100")
-        print(f"\n APPROVAL SUMMARY:")
-        print(f"    {aggregate_metrics['approved']} PRs ready for immediate deployment ({aggregate_metrics['approved']/aggregate_metrics['total_prs']*100:.1f}%)")
-        print(f"     {aggregate_metrics['conditional']} PRs require additional review ({aggregate_metrics['conditional']/aggregate_metrics['total_prs']*100:.1f}%)")
-        print(f"    {aggregate_metrics['rejected']} PRs blocked from release ({aggregate_metrics['rejected']/aggregate_metrics['total_prs']*100:.1f}%)")
-        print(f"\n  RISK ASSESSMENT:")
-        print(f"   🟢 {aggregate_metrics['risk_distribution']['low']} Low Risk PRs - Safe for production")
-        print(f"   🟡 {aggregate_metrics['risk_distribution']['medium']} Medium Risk PRs - Monitor carefully")
-        print(f"    {aggregate_metrics['risk_distribution']['high']} High Risk PRs - Immediate attention required")
-        print(f"\n STRATEGIC RECOMMENDATIONS:")
+        print(f"  Analyzed {aggregate_metrics['total_repos']} repositories with {aggregate_metrics['total_prs']} total pull requests")
+        print(f"  Overall quality score: {aggregate_metrics['avg_score']:.1f}/100")
+        print(f"\nAPPROVAL SUMMARY:")
+        print(f"  {aggregate_metrics['approved']} PRs ready for immediate deployment ({aggregate_metrics['approved']/aggregate_metrics['total_prs']*100:.1f}%)")
+        print(f"  {aggregate_metrics['conditional']} PRs require additional review ({aggregate_metrics['conditional']/aggregate_metrics['total_prs']*100:.1f}%)")
+        print(f"  {aggregate_metrics['rejected']} PRs blocked from release ({aggregate_metrics['rejected']/aggregate_metrics['total_prs']*100:.1f}%)")
+        print(f"\nRISK ASSESSMENT:")
+        print(f"  {aggregate_metrics['risk_distribution']['low']} Low Risk PRs - Safe for production")
+        print(f"  {aggregate_metrics['risk_distribution']['medium']} Medium Risk PRs - Monitor carefully")
+        print(f"  {aggregate_metrics['risk_distribution']['high']} High Risk PRs - Immediate attention required")
+        print(f"\nSTRATEGIC RECOMMENDATIONS:")
         if overall_health == "EXCELLENT":
-            print(f"   • Maintain current development practices across all repositories")
-            print(f"   • Continue automated quality checks and risk assessment")
+            print(f"  - Maintain current development practices across all repositories")
+            print(f"  - Continue automated quality checks and risk assessment")
         elif overall_health == "GOOD":
-            print(f"   • Focus on improving code quality in underperforming repositories")
-            print(f"   • Increase test coverage and code review rigor")
+            print(f"  - Focus on improving code quality in underperforming repositories")
+            print(f"  - Increase test coverage and code review rigor")
         else:
-            print(f"   • Immediate attention required for repositories with low scores")
-            print(f"   • Implement stricter review processes and quality gates")
-        print(f"   • Address all high-risk PRs before deployment")
-        print(f"   • Standardize development practices across repositories")
+            print(f"  - Immediate attention required for repositories with low scores")
+            print(f"  - Implement stricter review processes and quality gates")
+        print(f"  - Address all high-risk PRs before deployment")
+        print(f"  - Standardize development practices across repositories")
+
+def save_report_to_file(report_content: str, repo_name: str, report_type: str = "analysis") -> str:
+    """
+    Save analysis report to the reports folder with proper formatting
+    
+    Args:
+        report_content: The formatted report content
+        repo_name: Name of the repository
+        report_type: Type of report (analysis, summary, etc.)
+    
+    Returns:
+        Path to the saved report file
+    """
+    import os
+    from datetime import datetime
+    
+    # Create reports directory if it doesn't exist
+    reports_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_repo_name = repo_name.replace('/', '_').replace('.', '_')
+    filename = f"{report_type}_{safe_repo_name}_{timestamp}.txt"
+    filepath = os.path.join(reports_dir, filename)
+    
+    # Write report to file
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(report_content)
+    
+    return filepath
 
 if __name__ == "__main__":
     # Parse command line arguments
@@ -1574,13 +1676,14 @@ if __name__ == "__main__":
     # Configure logging level
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-        print(" Verbose logging enabled")
+        print("Verbose logging enabled")
     
     # Display startup information
-    print(f"\n Repositories specified: {len(args.repos)}")
+    print(f"\nRepositories specified: {len(args.repos)}")
     for idx, repo in enumerate(args.repos, 1):
-        print(f"   {idx}. {repo}")
-    print(f" PR limit per repository: {args.limit}")
+        print(f"  {idx}. {repo}")
+    print(f"PR limit per repository: {args.limit}")
+    print(f"Reports will be saved to: reports/")
     
     # Run multi-repository analysis
     asyncio.run(analyze_multiple_repositories(args.repos, args.limit))
