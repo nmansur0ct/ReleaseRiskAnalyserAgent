@@ -1,0 +1,91 @@
+# Basic Plugin Framework Configuration
+# This demonstrates a simple setup with core plugins
+
+workflow:
+  name: "basic_risk_analysis"
+  version: "2.0.0"
+  description: "Basic release risk analysis workflow"
+  execution_mode: "sequential_with_parallel"
+  timeout_seconds: 300
+
+plugins:
+  # Core analysis plugin - runs first
+  change_log_summarizer:
+    enabled: true
+    config:
+      confidence_threshold: 0.7
+      analysis_depth: "comprehensive"
+      timeout_seconds: 60
+
+  # Security analysis - runs in parallel
+  security_analyzer:
+    enabled: true
+    config:
+      scan_types:
+        - "secret_detection"
+        - "vulnerability_scan"
+        - "dependency_check"
+      severity_threshold: "medium"
+      custom_patterns:
+        api_keys: "(api_key|apikey).*['\"][A-Za-z0-9]{20,}['\"]"
+        tokens: "(token|auth).*['\"][A-Za-z0-9\\-_]{20,}['\"]"
+
+  # Policy validation
+  policy_validator:
+    enabled: true
+    config:
+      policy_sources:
+        - "internal_wiki"
+        - "confluence"
+      policy_categories:
+        - "deployment"
+        - "security"
+        - "compliance"
+      auto_update_policies: true
+
+  # Decision making agent
+  release_decision_agent:
+    enabled: true
+    config:
+      decision_criteria:
+        security_score_threshold: 25
+        compliance_required: true
+        approval_gates:
+          - "security_team"
+          - "compliance_team"
+        auto_approve_conditions:
+          change_size: "small"
+          security_score:
+            max: 10
+          affected_modules:
+            exclude:
+              - "core"
+              - "security"
+
+  # Notification system - runs last
+  notification_agent:
+    enabled: true
+    config:
+      channels:
+        - "slack"
+        - "email"
+      slack_config:
+        webhook_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#releases"
+        username: "RiskAnalyzer"
+      email_config:
+        smtp_server: "smtp.company.com"
+        from_address: "noreply@company.com"
+        recipients:
+          - "devops@company.com"
+          - "security@company.com"
+
+# Global configuration
+global_config:
+  log_level: "INFO"
+  max_parallel_agents: 3
+  enable_metrics: true
+  metrics_endpoint: "http://metrics.internal:8080"
+  cache_enabled: true
+  cache_backend: "memory"
+  hot_reload: true

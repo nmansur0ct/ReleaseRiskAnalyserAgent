@@ -1,0 +1,291 @@
+# Enterprise Plugin Framework Configuration
+# This demonstrates advanced features including compliance and custom plugins
+
+workflow:
+  name: "enterprise_risk_analysis"
+  version: "2.0.0"
+  description: "Comprehensive enterprise risk analysis with compliance"
+  execution_mode: "hybrid"
+  timeout_seconds: 600
+  retry_policy:
+    max_retries: 3
+    backoff_strategy: "exponential"
+
+plugins:
+  # Enhanced change log analysis
+  change_log_summarizer:
+    enabled: true
+    config:
+      llm_provider: "openai"
+      fallback_provider: "anthropic"
+      confidence_threshold: 0.8
+      analysis_depth: "comprehensive"
+      timeout_seconds: 120
+      cache_results: true
+      custom_prompts:
+        risk_assessment: |
+          Analyze the following code changes for potential risks:
+          - Security implications
+          - Performance impact
+          - Breaking changes
+          - Compliance considerations
+
+  # Advanced security scanning
+  security_analyzer:
+    enabled: true
+    config:
+      scan_types:
+        - "secret_detection"
+        - "vulnerability_scan"
+        - "dependency_check"
+        - "static_analysis"
+        - "license_compliance"
+      severity_threshold: "low"
+      custom_patterns:
+        api_keys: "(api_key|apikey).*['\"][A-Za-z0-9]{20,}['\"]"
+        tokens: "(token|auth).*['\"][A-Za-z0-9\\-_]{20,}['\"]"
+        passwords: "(password|pwd).*['\"][^'\"]{8,}['\"]"
+        certificates: "-----BEGIN.*CERTIFICATE-----"
+      vulnerability_databases:
+        - "https://nvd.nist.gov/feeds/json/cve/1.1/"
+        - "https://github.com/advisories"
+      scan_timeout: 180
+
+  # Compliance validation
+  custom_compliance_checker:
+    enabled: true
+    config:
+      standards:
+        - "SOX"
+        - "GDPR"
+        - "HIPAA"
+        - "PCI_DSS"
+      custom_rules:
+        financial_review:
+          file_patterns:
+            - "*financial*"
+            - "*billing*"
+            - "*payment*"
+            - "*transaction*"
+          required_approvers:
+            - "financial_team"
+            - "compliance_officer"
+        data_privacy:
+          keywords:
+            - "personal_data"
+            - "customer_info"
+            - "pii"
+            - "gdpr"
+          required_documentation:
+            - "privacy_impact_assessment"
+        security_critical:
+          file_patterns:
+            - "*auth*"
+            - "*security*"
+            - "*crypto*"
+          required_reviews:
+            - "security_architect"
+            - "ciso"
+      exemption_list:
+        - "test_data"
+        - "mock_services"
+        - "demo_content"
+
+  # Enhanced policy validation
+  policy_validator:
+    enabled: true
+    config:
+      policy_sources:
+        - "internal_wiki"
+        - "confluence"
+        - "sharepoint"
+        - "git_policies"
+      policy_categories:
+        - "deployment"
+        - "security"
+        - "compliance"
+        - "architecture"
+        - "data_governance"
+      auto_update_policies: true
+      policy_cache_ttl: 3600
+      validation_rules:
+        deployment:
+          - "require_approval_for_prod"
+          - "mandatory_testing"
+          - "rollback_plan_required"
+        security:
+          - "security_review_required"
+          - "vulnerability_scan_passed"
+          - "secrets_not_hardcoded"
+
+  # Advanced decision making
+  release_decision_agent:
+    enabled: true
+    config:
+      decision_criteria:
+        security_score_threshold: 25
+        compliance_required: true
+        approval_gates:
+          - "security_team"
+          - "compliance_team"
+          - "architecture_review"
+        auto_approve_conditions:
+          change_size: "small"
+          security_score:
+            max: 10
+          affected_modules:
+            exclude:
+              - "core"
+              - "security"
+              - "payment"
+              - "auth"
+        manual_review_triggers:
+          - "database_schema_changes"
+          - "api_breaking_changes"
+          - "infrastructure_changes"
+      escalation_rules:
+        high_risk:
+          - "cto"
+          - "security_director"
+        compliance_violation:
+          - "compliance_officer"
+          - "legal_team"
+        critical_security:
+          - "ciso"
+          - "incident_response_team"
+
+  # Comprehensive notifications
+  notification_agent:
+    enabled: true
+    config:
+      channels:
+        - "slack"
+        - "email"
+        - "webhook"
+        - "teams"
+        - "jira"
+      templates_path: "/config/notification_templates"
+      
+      slack_config:
+        webhook_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#releases"
+        username: "RiskAnalyzer"
+        mention_on_high_risk: "@channel"
+        
+      email_config:
+        smtp_server: "smtp.company.com"
+        smtp_port: 587
+        use_tls: true
+        from_address: "noreply@company.com"
+        recipients:
+          high_risk:
+            - "devops@company.com"
+            - "security@company.com"
+            - "cto@company.com"
+          compliance:
+            - "compliance@company.com"
+            - "legal@company.com"
+          normal:
+            - "devops@company.com"
+            
+      teams_config:
+        webhook_url: "${TEAMS_WEBHOOK_URL}"
+        
+      jira_config:
+        server_url: "https://company.atlassian.net"
+        username: "${JIRA_USERNAME}"
+        api_token: "${JIRA_API_TOKEN}"
+        project_key: "RISK"
+        issue_type: "Risk Assessment"
+        
+      notification_rules:
+        high_risk:
+          - "slack"
+          - "email"
+          - "jira"
+        compliance_violation:
+          - "email"
+          - "teams"
+          - "jira"
+        security_critical:
+          - "slack"
+          - "email"
+          - "teams"
+        approval_required:
+          - "slack"
+          - "email"
+
+  # Custom business logic plugin
+  custom_business_rules:
+    enabled: true
+    plugin_path: "/plugins/custom/business_rules.py"
+    class_name: "BusinessRulesPlugin"
+    config:
+      rules_database: "postgresql://localhost/business_rules"
+      validation_mode: "strict"
+      business_units:
+        - "finance"
+        - "hr"
+        - "operations"
+        - "marketing"
+      approval_matrix:
+        finance:
+          - "finance_manager"
+          - "cfo"
+        hr:
+          - "hr_director"
+        operations:
+          - "ops_manager"
+        marketing:
+          - "marketing_director"
+
+# Global configuration
+global_config:
+  log_level: "INFO"
+  max_parallel_agents: 5
+  
+  # Metrics and monitoring
+  enable_metrics: true
+  metrics_endpoint: "http://prometheus.internal:9090"
+  metrics_prefix: "risk_analyzer"
+  
+  # Distributed tracing
+  tracing_enabled: true
+  jaeger_endpoint: "http://jaeger.internal:14268"
+  
+  # Caching
+  cache_enabled: true
+  cache_backend: "redis"
+  cache_config:
+    host: "redis.internal"
+    port: 6379
+    db: 0
+    password: "${REDIS_PASSWORD}"
+    ssl: true
+    
+  # Database
+  database:
+    host: "postgres.internal"
+    port: 5432
+    database: "risk_analyzer"
+    username: "${DB_USERNAME}"
+    password: "${DB_PASSWORD}"
+    schema: "analytics"
+    pool_size: 10
+    
+  # Security
+  security:
+    enable_encryption: true
+    encryption_key: "${ENCRYPTION_KEY}"
+    audit_logging: true
+    
+  # Performance
+  performance:
+    worker_threads: 4
+    max_memory_usage: "2GB"
+    gc_threshold: 0.8
+    
+  # Hot reload and development
+  hot_reload: true
+  custom_plugins_path: "/plugins/custom"
+  reload_interval: 30

@@ -1,0 +1,35 @@
+# Development Configuration
+# Simplified configuration for development and testing
+
+workflow:
+  name: "dev_risk_analysis"
+  version: "2.0.0-dev"
+  description: "Development environment risk analysis"
+  execution_mode: "sequential"
+  timeout_seconds: 120
+
+plugins:
+  change_log_summarizer:
+    enabled: true
+    config:
+      llm_provider: "mock"  # Use mock provider for testing
+      confidence_threshold: 0.5
+      analysis_depth: "basic"
+      timeout_seconds: 30
+
+  security_analyzer:
+    enabled: true
+    config:
+      scan_types:
+        - "secret_detection"  # Limited scanning for dev
+      severity_threshold: "high"
+
+  notification_agent:
+    enabled: false  # Disable notifications in dev
+
+global_config:
+  log_level: "DEBUG"
+  max_parallel_agents: 2
+  enable_metrics: false
+  cache_enabled: false
+  hot_reload: true
