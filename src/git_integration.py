@@ -152,9 +152,29 @@ class GitHubProvider(GitProvider):
             owner, repo = self._parse_github_url(repo_url)
             url = f"{self.api_base_url}/repos/{owner}/{repo}/pulls/{pr_number}/files"
             
-            # In a real implementation, you would make the actual API call
-            # For now, return mock data
-            await asyncio.sleep(0.1)  # Simulate API delay
+            if self.session:
+                try:
+                    response = self.session.get(url)
+                    if response.status_code == 200:
+                        files = response.json()
+                        result = []
+                        for file in files:
+                            result.append({
+                                'filename': file.get('filename'),
+                                'status': file.get('status'),
+                                'additions': file.get('additions', 0),
+                                'deletions': file.get('deletions', 0),
+                                'changes': file.get('changes', 0),
+                                'patch': file.get('patch', '')
+                            })
+                        logger.info(f"Fetched {len(result)} real files for PR #{pr_number}")
+                        return result
+                    else:
+                        logger.warning(f"Failed to fetch files: {response.status_code}, using mock data")
+                        return self._generate_mock_files_data()
+                except Exception as api_error:
+                    logger.error(f"API call failed: {api_error}, using mock data")
+                    return self._generate_mock_files_data()
             
             return self._generate_mock_files_data()
             
@@ -171,13 +191,63 @@ class GitHubProvider(GitProvider):
         try:
             owner, repo = self._parse_github_url(repo_url)
             
-            # Fetch both issue comments and review comments
-            # In real implementation:
-            # issue_comments_url = f"{self.api_base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
-            # review_comments_url = f"{self.api_base_url}/repos/{owner}/{repo}/pulls/{pr_number}/comments"
+            # Fetch both issue comments and review comments from GitHub API
+            all_comments = []
             
-            await asyncio.sleep(0.1)  # Simulate API delay
+            if self.session:
+                try:
+                    # Fetch issue comments (general PR comments)
+                    issue_comments_url = f"{self.api_base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
+                    issue_response = self.session.get(issue_comments_url)
+                    
+                    if issue_response.status_code == 200:
+                        issue_comments = issue_response.json()
+                        for comment in issue_comments:
+                            all_comments.append({
+                                'id': comment.get('id'),
+                                'user': comment.get('user', {}).get('login', 'Unknown'),
+                                'body': comment.get('body', ''),
+                                'created_at': comment.get('created_at'),
+                                'updated_at': comment.get('updated_at'),
+                                'type': 'issue_comment',
+                                'url': comment.get('html_url')
+                            })
+                    else:
+                        logger.warning(f"Failed to fetch issue comments: {issue_response.status_code}")
+                    
+                    # Fetch review comments (inline code review comments)
+                    review_comments_url = f"{self.api_base_url}/repos/{owner}/{repo}/pulls/{pr_number}/comments"
+                    review_response = self.session.get(review_comments_url)
+                    
+                    if review_response.status_code == 200:
+                        review_comments = review_response.json()
+                        for comment in review_comments:
+                            all_comments.append({
+                                'id': comment.get('id'),
+                                'user': comment.get('user', {}).get('login', 'Unknown'),
+                                'body': comment.get('body', ''),
+                                'created_at': comment.get('created_at'),
+                                'updated_at': comment.get('updated_at'),
+                                'type': 'review_comment',
+                                'path': comment.get('path'),
+                                'line': comment.get('line'),
+                                'url': comment.get('html_url')
+                            })
+                    else:
+                        logger.warning(f"Failed to fetch review comments: {review_response.status_code}")
+                    
+                    # Sort comments by creation date
+                    all_comments.sort(key=lambda x: x.get('created_at', ''))
+                    
+                    logger.info(f"Fetched {len(all_comments)} real comments for PR #{pr_number}")
+                    return all_comments
+                    
+                except Exception as api_error:
+                    logger.error(f"API call failed: {api_error}, falling back to mock data")
+                    return self._generate_mock_comments_data(pr_number)
             
+            # Fallback to mock data if session not available
+            logger.warning("No session available, using mock data")
             return self._generate_mock_comments_data(pr_number)
             
         except Exception as e:
@@ -189,6 +259,11 @@ class GitHubProvider(GitProvider):
         # Handle various GitHub URL formats
         if repo_url.startswith('https://github.com/'):
             path = repo_url.replace('https://github.com/', '').rstrip('/')
+            # Remove branch/tree path if present (e.g., /tree/main or /tree/v1)
+            if '/tree/' in path:
+                path = path.split('/tree/')[0]
+            elif '/pull/' in path:
+                path = path.split('/pull/')[0]
         elif repo_url.startswith('git@github.com:'):
             path = repo_url.replace('git@github.com:', '').replace('.git', '').rstrip('/')
         else:
