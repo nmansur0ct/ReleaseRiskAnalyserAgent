@@ -1573,7 +1573,7 @@ async def generate_comprehensive_summary_report(all_results: list, repo_urls: li
                             comment_type = comment.get('type', 'comment')
                             # Truncate long comments for report
                             if len(comment_body) > 120:
-                                comment_body = comment_body[:120] + \"...\"
+                                comment_body = comment_body[:120] + "..."
                             print_and_capture(f"          {comment_idx}. [{comment_type}] {comment_user}:")
                             print_and_capture(f"             {comment_body}")
                         if len(pr_comments) > 5:
