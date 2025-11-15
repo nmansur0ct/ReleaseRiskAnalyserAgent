@@ -68,11 +68,11 @@ logger = logging.getLogger(__name__)
 async def demonstrate_git_integration():
     """Demonstrate Git integration capabilities"""
     
-    print("🔗 Git Integration Demonstration")
+    print(" Git Integration Demonstration")
     print("="*80)
     
     if not MODULES_AVAILABLE:
-        print("❌ Required modules not available. Please check your installation.")
+        print(" Required modules not available. Please check your installation.")
         return
     
     # Show environment configuration
@@ -80,8 +80,8 @@ async def demonstrate_git_integration():
     git_config = env_config.get_git_config()
     llm_config = env_config.get_llm_config()
     
-    print(f"\n🔧 Configuration Status:")
-    print(f"Git Access Token: {'✅ Configured' if git_config['access_token'] else '⚠️  Not configured (using mock data)'}")
+    print(f"\n Configuration Status:")
+    print(f"Git Access Token: {' Configured' if git_config['access_token'] else '  Not configured (using mock data)'}")
     print(f"Default Repo URL: {git_config.get('default_repo_url', 'Not set')}")
     print(f"LLM Provider: {llm_config['provider']}")
     print(f"LLM Gateway URL: {llm_config.get('walmart_llm_gateway_url', 'Not configured')}")
@@ -90,18 +90,18 @@ async def demonstrate_git_integration():
     git_manager = get_git_manager()
     llm_manager = get_llm_manager()
     
-    print(f"\n📊 Available Providers:")
+    print(f"\n Available Providers:")
     print(f"Git Providers: {list(git_manager.providers.keys())}")
     print(f"LLM Providers: {llm_manager.get_available_providers()}")
     
     # Demo repository URL (can be changed via environment variable)
     demo_repo_url = git_config.get('default_repo_url') or "https://gecgithub01.walmart.com/n0m08hp/TransactionPatterns.git"
     
-    print(f"\n🗂️  Demo Repository: {demo_repo_url}")
+    print(f"\n  Demo Repository: {demo_repo_url}")
     print("-" * 60)
     
     # Fetch recent pull requests
-    print("\n📋 Fetching Recent Pull Requests...")
+    print("\n Fetching Recent Pull Requests...")
     try:
         git_manager = get_git_manager()
         git_provider = git_manager.get_provider("github")
@@ -127,14 +127,14 @@ async def demonstrate_git_integration():
             
     except Exception as e:
         logger.error(f"Error fetching PRs: {e}")
-        print(f"❌ Error fetching pull requests: {e}")
+        print(f" Error fetching pull requests: {e}")
 
 async def analyze_pr_with_llm(pr_data: Dict[str, Any], llm_manager) -> None:
     """Analyze a pull request using LLM"""
-    print(f"\n   🤖 LLM Analysis:")
+    print(f"\n    LLM Analysis:")
     
     if not MODULES_AVAILABLE or not analyze_code_changes:
-        print("   ⚠️  LLM analysis not available")
+        print("     LLM analysis not available")
         return
     
     try:
@@ -155,26 +155,26 @@ async def analyze_pr_with_llm(pr_data: Dict[str, Any], llm_manager) -> None:
             print(f"   Provider: {result['provider_used']}")
             print(f"   Response: {result['response'][:100]}...")
         else:
-            print(f"   ⚠️  Analysis failed: {result.get('errors', ['Unknown error'])}")
+            print(f"     Analysis failed: {result.get('errors', ['Unknown error'])}")
             
     except Exception as e:
-        print(f"   ❌ LLM analysis error: {e}")
+        print(f"    LLM analysis error: {e}")
 
 async def demonstrate_specific_pr_analysis():
     """Demonstrate analyzing a specific PR"""
     
-    print("\n\n🎯 Specific PR Analysis Demo")
+    print("\n\n Specific PR Analysis Demo")
     print("="*80)
     
     if not MODULES_AVAILABLE:
-        print("❌ Required modules not available")
+        print(" Required modules not available")
         return
     
     # Demo with a specific PR
     demo_repo = "https://gecgithub01.walmart.com/n0m08hp/TransactionPatterns.git"
     demo_pr_number = 1  # This will use mock data
     
-    print(f"\n📥 Fetching PR #{demo_pr_number} from {demo_repo}")
+    print(f"\n Fetching PR #{demo_pr_number} from {demo_repo}")
     
     try:
         git_manager = get_git_manager()
@@ -194,7 +194,7 @@ async def demonstrate_specific_pr_analysis():
             }
         
         if pr_data:
-            print(f"\n📋 PR Details:")
+            print(f"\n PR Details:")
             print(f"Title: {pr_data['title']}")
             print(f"Author: {pr_data['author']}")
             print(f"State: {pr_data['state']}")
@@ -203,7 +203,7 @@ async def demonstrate_specific_pr_analysis():
             print(f"Labels: {', '.join(pr_data.get('labels', []))}")
             
             if pr_data.get('changed_files'):
-                print(f"\n📁 Changed Files:")
+                print(f"\n Changed Files:")
                 for file in pr_data['changed_files'][:5]:  # Show first 5 files
                     print(f"   - {file}")
                 if len(pr_data['changed_files']) > 5:
@@ -213,16 +213,16 @@ async def demonstrate_specific_pr_analysis():
             await run_comprehensive_analysis(pr_data)
             
         else:
-            print("❌ Failed to fetch PR data")
+            print(" Failed to fetch PR data")
             
     except Exception as e:
         logger.error(f"Error in specific PR analysis: {e}")
-        print(f"❌ Error: {e}")
+        print(f" Error: {e}")
 
 async def run_comprehensive_analysis(pr_data: Dict[str, Any]):
     """Run comprehensive analysis on PR data"""
     
-    print(f"\n🔍 Comprehensive Risk Analysis")
+    print(f"\n Comprehensive Risk Analysis")
     print("-" * 40)
     
     try:
@@ -233,7 +233,7 @@ async def run_comprehensive_analysis(pr_data: Dict[str, Any]):
         await simulate_plugin_analysis("release_decision_agent", pr_data)
         
     except Exception as e:
-        print(f"❌ Analysis error: {e}")
+        print(f" Analysis error: {e}")
 
 async def simulate_plugin_analysis(plugin_name: str, pr_data: Dict[str, Any]):
     """Simulate plugin-based analysis"""
@@ -241,14 +241,14 @@ async def simulate_plugin_analysis(plugin_name: str, pr_data: Dict[str, Any]):
     await asyncio.sleep(0.1)  # Simulate processing time
     
     if plugin_name == "change_log_summarizer":
-        print(f"🔍 {plugin_name.replace('_', ' ').title()}")
+        print(f" {plugin_name.replace('_', ' ').title()}")
         print(f"   Summary: Analyzed {pr_data['changed_files_count']} files")
         print(f"   Risk Level: {'HIGH' if pr_data['additions'] > 300 else 'MEDIUM' if pr_data['additions'] > 100 else 'LOW'}")
         print(f"   Impact: {len(pr_data.get('changed_files', []))} modules affected")
         
     elif plugin_name == "security_analyzer":
         security_score = min(100, max(0, 100 - (pr_data['additions'] // 10)))
-        print(f"🔍 {plugin_name.replace('_', ' ').title()}")
+        print(f" {plugin_name.replace('_', ' ').title()}")
         print(f"   Security Score: {security_score}/100")
         
         # Check for security-related changes
@@ -268,8 +268,8 @@ async def simulate_plugin_analysis(plugin_name: str, pr_data: Dict[str, Any]):
         labels = pr_data.get('labels', [])
         compliant = not any(label in ['breaking-change', 'experimental'] for label in labels)
         
-        print(f"🔍 {plugin_name.replace('_', ' ').title()}")
-        print(f"   Status: {'✅ COMPLIANT' if compliant else '❌ NON-COMPLIANT'}")
+        print(f" {plugin_name.replace('_', ' ').title()}")
+        print(f"   Status: {' COMPLIANT' if compliant else ' NON-COMPLIANT'}")
         print(f"   Checks: Code review required, Documentation updated")
         
     elif plugin_name == "release_decision_agent":
@@ -282,8 +282,8 @@ async def simulate_plugin_analysis(plugin_name: str, pr_data: Dict[str, Any]):
         
         approved = len(risk_factors) == 0
         
-        print(f"🔍 {plugin_name.replace('_', ' ').title()}")
-        print(f"   Decision: {'✅ APPROVED' if approved else '⚠️  REVIEW REQUIRED'}")
+        print(f" {plugin_name.replace('_', ' ').title()}")
+        print(f"   Decision: {' APPROVED' if approved else '  REVIEW REQUIRED'}")
         if risk_factors:
             print(f"   Concerns: {', '.join(risk_factors)}")
         print(f"   Recommendation: {'Ready for merge' if approved else 'Manual review needed'}")
@@ -291,7 +291,7 @@ async def simulate_plugin_analysis(plugin_name: str, pr_data: Dict[str, Any]):
 async def main():
     """Main demo function"""
     
-    print("🚀 Enhanced Git Integration & LLM Analysis Demo")
+    print(" Enhanced Git Integration & LLM Analysis Demo")
     print("="*80)
     
     try:
@@ -301,11 +301,11 @@ async def main():
         # Run specific PR analysis
         await demonstrate_specific_pr_analysis()
         
-        print(f"\n✅ Demo completed successfully!")
+        print(f"\n Demo completed successfully!")
         
     except Exception as e:
         logger.error(f"Demo failed: {e}")
-        print(f"❌ Demo failed: {e}")
+        print(f" Demo failed: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())

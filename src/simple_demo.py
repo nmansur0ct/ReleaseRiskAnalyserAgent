@@ -20,7 +20,7 @@ try:
     from llm_integration import get_llm_manager
     ENV_MODULES_AVAILABLE = True
 except ImportError:
-    print("❌ Required modules not available. Please ensure environment_config and llm_integration are installed.")
+    print(" Required modules not available. Please ensure environment_config and llm_integration are installed.")
     sys.exit(1)
 
 # Configure logging
@@ -35,62 +35,62 @@ async def fetch_repository_prs(repo_url, pr_limit=5):
     """ 
     Fetch actual PRs from the specified repository
     """
-    print("\n🔧 Git Integration - PR Fetching")
+    print("\n Git Integration - PR Fetching")
     print("=" * 60)
     
-    print(f"📂 Analyzing repository: {repo_url}")
-    print(f"🔍 PR fetch limit: {pr_limit}")
+    print(f" Analyzing repository: {repo_url}")
+    print(f" PR fetch limit: {pr_limit}")
     
     try:
         from git_integration import get_git_manager
         git_manager = get_git_manager()
         
-        print("📡 Available Git Providers:")
+        print(" Available Git Providers:")
         for provider_name in git_manager.providers.keys():
-            print(f"  ✅ {provider_name}")
+            print(f"   {provider_name}")
         
         # Get configuration
         env_config = get_env_config()
         git_config = env_config.get_git_config()
         
         if not git_config.get('access_token'):
-            print("❌ No Git access token configured")
-            print("� Please set GIT_ACCESS_TOKEN environment variable")
+            print(" No Git access token configured")
+            print(" Please set GIT_ACCESS_TOKEN environment variable")
             return []
         
-        print(f"🔑 Using Git access token...")
+        print(f" Using Git access token...")
         access_token = git_config.get('access_token')
-        print(f"🔑 Token configured: {access_token[:20]}...")
+        print(f" Token configured: {access_token[:20]}...")
         
         try:
             # Fetch PRs from the repository
             git_provider = git_manager.get_provider("github")
             if not git_provider:
-                print("❌ GitHub provider not available")
+                print(" GitHub provider not available")
                 return []
             
             prs = await git_provider.get_pull_requests(repo_url, limit=pr_limit)
             repo_name = repo_url.split('/')[-1].replace('.git', '')
-            print(f"📋 Found {len(prs)} pull requests from {repo_name} repository")
+            print(f" Found {len(prs)} pull requests from {repo_name} repository")
             
             # Display PRs for verification
             for i, pr in enumerate(prs[:3], 1):  # Show first 3 PRs
                 print(f"\n  {i}. PR #{pr['number']}: {pr['title']}")
-                print(f"     👤 Author: {pr['author']}")
-                print(f"     📊 Changes: +{pr['additions']} -{pr['deletions']}")
-                print(f"     📁 Files: {len(pr.get('changed_files', []))}")
-                print(f"     🔗 URL: {pr.get('url', 'N/A')}")
+                print(f"      Author: {pr['author']}")
+                print(f"      Changes: +{pr['additions']} -{pr['deletions']}")
+                print(f"      Files: {len(pr.get('changed_files', []))}")
+                print(f"      URL: {pr.get('url', 'N/A')}")
             
             return prs
             
         except Exception as e:
-            print(f"❌ Failed to fetch PRs: {e}")
-            print(f"⚠️  Error details: {str(e)}")
+            print(f" Failed to fetch PRs: {e}")
+            print(f"  Error details: {str(e)}")
             return []
             
     except ImportError as e:
-        print(f"❌ Git integration module not available: {e}")
-        print("💡 Please ensure git_integration module is installed")
+        print(f" Git integration module not available: {e}")
+        print(" Please ensure git_integration module is installed")
         return []
 
 async def simple_plugin_demo(repo_url, pr_limit=5):
@@ -98,14 +98,14 @@ async def simple_plugin_demo(repo_url, pr_limit=5):
     Enhanced demonstration of the plugin architecture with comprehensive LLM evaluation for each PR
     """
     
-    print("🚀 Enhanced LLM-Powered PR Analysis Framework")
+    print(" Enhanced LLM-Powered PR Analysis Framework")
     print("="*80)
     
     print(f" Target Repository: {repo_url}")
     print("="*80)
     
     # Demonstrate environment configuration
-    print("\n🔧 Environment Configuration Status:")
+    print("\n Environment Configuration Status:")
     print("-" * 40)
     
     env_config = get_env_config()
@@ -114,10 +114,10 @@ async def simple_plugin_demo(repo_url, pr_limit=5):
     
     print(f"Agent LLM Provider: {llm_config['provider']}")
     print(f"Fallback Provider: {llm_config['fallback_provider']}")
-    print(f"Walmart Agent LLM Gateway: {'✅ Configured' if llm_config.get('walmart_llm_gateway_key') else '⚠️  Not configured'}")
+    print(f"Walmart Agent LLM Gateway: {' Configured' if llm_config.get('walmart_llm_gateway_key') else '  Not configured'}")
     print(f"OpenAI Configured: {'Yes' if llm_config['openai_api_key'] else 'No (using env default)'}")
     print(f"Anthropic Configured: {'Yes' if llm_config['anthropic_api_key'] else 'No (using env default)'}")
-    print(f"Git Access Token: {'✅ Configured' if git_config.get('access_token') else '❌ Not configured'}")
+    print(f"Git Access Token: {' Configured' if git_config.get('access_token') else ' Not configured'}")
     
     # Check Agent LLM manager
     llm_manager = get_llm_manager()
@@ -134,22 +134,22 @@ async def simple_plugin_demo(repo_url, pr_limit=5):
         print(f"Git Providers: {list(git_manager.providers.keys())}")
     
     # Fetch actual PRs from the repository
-    print(f"\n🔍 FETCHING ACTUAL PRS FROM REPOSITORY")
+    print(f"\n FETCHING ACTUAL PRS FROM REPOSITORY")
     print("=" * 60)
     git_prs = await fetch_repository_prs(repo_url, pr_limit)
     
     # Check if we have real PRs to analyze
     if git_prs and len(git_prs) > 0:
         repo_name = repo_url.split('/')[-1].replace('.git', '')
-        print(f"\n✅ FOUND {len(git_prs)} REAL PRS FROM {repo_name.upper()} REPOSITORY")
-        print(f"� Analyzing each PR with comprehensive LLM evaluation...")
+        print(f"\n FOUND {len(git_prs)} REAL PRS FROM {repo_name.upper()} REPOSITORY")
+        print(f" Analyzing each PR with comprehensive LLM evaluation...")
         
         # Analyze each PR individually
         pr_results = []
         
         for idx, pr_data in enumerate(git_prs, 1):
             print(f"\n{'='*80}")
-            print(f"🔍 PR ANALYSIS #{idx}/{len(git_prs)}: DETAILED LLM EVALUATION")
+            print(f" PR ANALYSIS #{idx}/{len(git_prs)}: DETAILED LLM EVALUATION")
             print(f"{'='*80}")
             
             # Analyze this specific PR
@@ -162,21 +162,21 @@ async def simple_plugin_demo(repo_url, pr_limit=5):
     else:
         # No PRs found - notify user
         repo_name = repo_url.split('/')[-1].replace('.git', '')
-        print(f"\n❌ NO PULL REQUESTS FOUND IN {repo_name.upper()} REPOSITORY")
+        print(f"\n NO PULL REQUESTS FOUND IN {repo_name.upper()} REPOSITORY")
         print("="*60)
-        print(f"📋 Repository Analysis Summary:")
-        print(f"   🔗 Repository: {repo_url}")
-        print(f"   📊 Total PRs Found: 0")
-        print(f"   📅 Search Period: All time")
-        print(f"   🔍 Search Limit: {pr_limit} PRs")
+        print(f" Repository Analysis Summary:")
+        print(f"    Repository: {repo_url}")
+        print(f"    Total PRs Found: 0")
+        print(f"    Search Period: All time")
+        print(f"    Search Limit: {pr_limit} PRs")
         print()
-        print(f"💡 POSSIBLE REASONS:")
+        print(f" POSSIBLE REASONS:")
         print(f"   • Repository has no pull requests")
         print(f"   • All PRs are already merged/closed")
         print(f"   • Access permissions may be limited")
         print(f"   • Repository is private and token access is restricted")
         print()
-        print(f"🔄 RECOMMENDATIONS:")
+        print(f" RECOMMENDATIONS:")
         print(f"   • Check repository URL is correct")
         print(f"   • Verify Git access token has proper permissions")
         print(f"   • Try with a different repository that has open PRs")
@@ -185,7 +185,7 @@ async def simple_plugin_demo(repo_url, pr_limit=5):
         # Generate LLM-powered summary of the no-PR situation
         await generate_no_pr_llm_summary(repo_url)
     
-    print(f"\n🏁 ANALYSIS COMPLETE!")
+    print(f"\n ANALYSIS COMPLETE!")
     print("="*80)
 
 async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_index: int, total_prs: int):
@@ -200,15 +200,15 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
     pr_deletions = pr_data.get('deletions', 0)
     pr_files = pr_data.get('changed_files', [])
     
-    print(f"📋 PR #{pr_number}: {pr_title}")
-    print(f"👤 Author: {pr_author}")
-    print(f"📊 Changes: +{pr_additions} -{pr_deletions} lines")
-    print(f"📁 Files Modified: {len(pr_files)}")
-    print(f"⏱️  Analysis Progress: {pr_index}/{total_prs}")
+    print(f" PR #{pr_number}: {pr_title}")
+    print(f" Author: {pr_author}")
+    print(f" Changes: +{pr_additions} -{pr_deletions} lines")
+    print(f" Files Modified: {len(pr_files)}")
+    print(f"⏱  Analysis Progress: {pr_index}/{total_prs}")
     print()
     
     # Perform detailed plugin analysis for this specific PR
-    print(f"🔄 EXECUTING 5-PLUGIN LLM ANALYSIS...")
+    print(f" EXECUTING 5-PLUGIN LLM ANALYSIS...")
     print("-" * 60)
     
     # Plugin analyses with actual PR data
@@ -275,12 +275,12 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
     # Generate LLM-powered PR verdict
     pr_verdict = await generate_pr_verdict_with_llm(pr_data, plugin_results, repo_url)
     
-    print(f"\n📋 PR #{pr_number} FINAL VERDICT:")
+    print(f"\n PR #{pr_number} FINAL VERDICT:")
     print("=" * 50)
-    print(f"✅ Recommendation: {pr_verdict['recommendation']}")
-    print(f"🎯 Confidence: {pr_verdict['confidence']}%")
-    print(f"⚠️  Risk Level: {pr_verdict['risk_level']}")
-    print(f"📊 Overall Score: {pr_verdict['score']}/100")
+    print(f" Recommendation: {pr_verdict['recommendation']}")
+    print(f" Confidence: {pr_verdict['confidence']}%")
+    print(f"  Risk Level: {pr_verdict['risk_level']}")
+    print(f" Overall Score: {pr_verdict['score']}/100")
     print()
     
     return {
@@ -292,8 +292,12 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
 async def generate_pr_verdict_with_llm(pr_data: Dict[str, Any], plugin_results: Dict[str, Any], repo_url: str):
 
     """ 
-        Generate LLM-powered verdict for a specific PR
+    Generate LLM-powered verdict for a specific PR
     """
+    # Handle None plugin_results as first line to prevent AttributeError
+    if plugin_results is None:
+        plugin_results = {}
+    
     try:
         from llm_integration import get_llm_manager
         
@@ -331,7 +335,7 @@ async def generate_pr_verdict_with_llm(pr_data: Dict[str, Any], plugin_results: 
         """
         
         llm_manager = get_llm_manager()
-        print(f"🤖 Generating LLM verdict for PR #{pr_number}...")
+        print(f" Generating LLM verdict for PR #{pr_number}...")
         
         try:
             llm_result = await llm_manager.generate_with_fallback(prompt, "walmart_llm_gateway")
@@ -379,10 +383,10 @@ async def generate_overall_repository_verdict(all_prs: list, pr_results: list, r
     """
     repo_name = repo_url.split('/')[-1].replace('.git', '')
     
-    print(f"\n🏆 OVERALL REPOSITORY ASSESSMENT")
+    print(f"\n OVERALL REPOSITORY ASSESSMENT")
     print("=" * 80)
-    print(f"📊 Repository: {repo_name}")
-    print(f"🔍 Total PRs Analyzed: {len(all_prs)}")
+    print(f" Repository: {repo_name}")
+    print(f" Total PRs Analyzed: {len(all_prs)}")
     print()
     
     # Calculate aggregate metrics
@@ -397,20 +401,20 @@ async def generate_overall_repository_verdict(all_prs: list, pr_results: list, r
     medium_risk_count = sum(1 for result in pr_results if result['verdict']['risk_level'] == 'MEDIUM')
     high_risk_count = sum(1 for result in pr_results if result['verdict']['risk_level'] == 'HIGH')
     
-    print(f"📋 AGGREGATE ANALYSIS RESULTS:")
+    print(f" AGGREGATE ANALYSIS RESULTS:")
     print("-" * 50)
-    print(f"✅ Approved PRs: {total_approved}")
-    print(f"⚠️  Conditional PRs: {total_conditional}")
-    print(f"❌ Rejected PRs: {total_rejected}")
+    print(f" Approved PRs: {total_approved}")
+    print(f"  Conditional PRs: {total_conditional}")
+    print(f" Rejected PRs: {total_rejected}")
     print()
-    print(f"📊 RISK DISTRIBUTION:")
+    print(f" RISK DISTRIBUTION:")
     print(f"   🟢 Low Risk: {low_risk_count} PRs")
     print(f"   🟡 Medium Risk: {medium_risk_count} PRs")
-    print(f"   🔴 High Risk: {high_risk_count} PRs")
+    print(f"    High Risk: {high_risk_count} PRs")
     print()
-    print(f"📈 QUALITY METRICS:")
-    print(f"   🎯 Average Confidence: {avg_confidence:.1f}%")
-    print(f"   📊 Average Quality Score: {avg_score:.1f}/100")
+    print(f" QUALITY METRICS:")
+    print(f"    Average Confidence: {avg_confidence:.1f}%")
+    print(f"    Average Quality Score: {avg_score:.1f}/100")
     print()
     
     # Generate LLM-powered overall verdict
@@ -472,9 +476,9 @@ async def generate_repository_llm_summary(repo_name: str, all_prs: list, pr_resu
         """
         
         llm_manager = get_llm_manager()
-        print(f"🤖 GENERATING COMPREHENSIVE REPOSITORY ASSESSMENT...")
+        print(f" GENERATING COMPREHENSIVE REPOSITORY ASSESSMENT...")
         print("=" * 60)
-        print(f"🧠 LLM Provider: Generating executive summary...")
+        print(f" LLM Provider: Generating executive summary...")
         
         try:
             llm_result = await llm_manager.generate_with_fallback(prompt, "walmart_llm_gateway")
@@ -483,10 +487,10 @@ async def generate_repository_llm_summary(repo_name: str, all_prs: list, pr_resu
                 summary_response = llm_result['response']
                 provider_used = llm_result['provider_used']
                 
-                print(f"\n📋 EXECUTIVE REPOSITORY ASSESSMENT")
+                print(f"\n EXECUTIVE REPOSITORY ASSESSMENT")
                 print("=" * 60)
-                print(f"🤖 Generated by: AI Agent ({provider_used})")
-                print(f"📊 Repository: {repo_name}")
+                print(f" Generated by: AI Agent ({provider_used})")
+                print(f" Repository: {repo_name}")
                 print()
                 
                 # Format and display the LLM-generated summary
@@ -496,40 +500,40 @@ async def generate_repository_llm_summary(repo_name: str, all_prs: list, pr_resu
                         print(f"   {line.strip()}")
                 
                 print()
-                print(f"✅ Repository Assessment Complete!")
-                print(f"⏱️  Total Analysis Time: ~{len(all_prs) * 4.5:.1f} seconds")
-                print(f"🎯 Assessment Quality: AI-optimized for enterprise decision-making")
+                print(f" Repository Assessment Complete!")
+                print(f"⏱  Total Analysis Time: ~{len(all_prs) * 4.5:.1f} seconds")
+                print(f" Assessment Quality: AI-optimized for enterprise decision-making")
             else:
                 raise Exception("LLM generation failed")
         
         except Exception as llm_error:
             # Fallback to structured summary
-            print(f"⚠️  LLM unavailable, generating structured assessment...")
+            print(f"  LLM unavailable, generating structured assessment...")
             print()
             
             overall_health = "EXCELLENT" if metrics['avg_score'] >= 85 else "GOOD" if metrics['avg_score'] >= 70 else "NEEDS_ATTENTION"
             release_readiness = "READY" if metrics['total_rejected'] == 0 and metrics['risk_distribution']['high'] == 0 else "CONDITIONAL"
             
             fallback_summary = f"""
-📋 EXECUTIVE REPOSITORY ASSESSMENT
+ EXECUTIVE REPOSITORY ASSESSMENT
 ====================================================
 
-🏢 REPOSITORY HEALTH: {overall_health}
+ REPOSITORY HEALTH: {overall_health}
    Repository {repo_name} shows {overall_health.lower().replace('_', ' ')} health metrics with {metrics['avg_score']:.1f}/100 average quality score
    across {len(all_prs)} analyzed pull requests.
 
-🚀 RELEASE READINESS: {release_readiness}
+ RELEASE READINESS: {release_readiness}
    • {metrics['total_approved']} PRs approved for immediate deployment
    • {metrics['total_conditional']} PRs require additional review
    • {metrics['total_rejected']} PRs blocked from release
    • {metrics['avg_confidence']:.1f}% average assessment confidence
 
-⚠️  RISK ASSESSMENT:
+  RISK ASSESSMENT:
    • Low Risk: {metrics['risk_distribution']['low']} PRs (safe for production)
    • Medium Risk: {metrics['risk_distribution']['medium']} PRs (require monitoring)
    • High Risk: {metrics['risk_distribution']['high']} PRs (need immediate attention)
 
-📈 STRATEGIC RECOMMENDATIONS:
+ STRATEGIC RECOMMENDATIONS:
    • {'Continue current development practices - excellent quality maintained' if overall_health == 'EXCELLENT' 
      else 'Focus on code quality improvements and additional testing' if overall_health == 'GOOD'
      else 'Immediate attention required - implement stricter review processes'}
@@ -538,7 +542,7 @@ async def generate_repository_llm_summary(repo_name: str, all_prs: list, pr_resu
    • Maintain current security and compliance standards
    • Continue automated quality checks and risk assessment
 
-🔄 NEXT STEPS:
+ NEXT STEPS:
    1. {'Deploy approved PRs to production' if metrics['total_approved'] > 0 else 'Review conditional PRs first'}
    2. {'Address conditional approvals' if metrics['total_conditional'] > 0 else 'Monitor deployment metrics'}
    3. Monitor post-deployment metrics and user feedback
@@ -549,24 +553,24 @@ async def generate_repository_llm_summary(repo_name: str, all_prs: list, pr_resu
     
     except ImportError:
         # Simple summary when LLM integration not available
-        print(f"\n📋 REPOSITORY SUMMARY (Standalone Mode)")
+        print(f"\n REPOSITORY SUMMARY (Standalone Mode)")
         print("=" * 50)
         
         overall_status = "HEALTHY" if metrics['avg_score'] >= 75 else "ATTENTION_NEEDED"
         
         simple_summary = f"""
-🏢 Repository: {repo_name}
-📊 Analysis Summary: {len(all_prs)} PRs analyzed
-✅ Quality Score: {metrics['avg_score']:.1f}/100
-🎯 Confidence: {metrics['avg_confidence']:.1f}%
+ Repository: {repo_name}
+ Analysis Summary: {len(all_prs)} PRs analyzed
+ Quality Score: {metrics['avg_score']:.1f}/100
+ Confidence: {metrics['avg_confidence']:.1f}%
 
-📋 Results Breakdown:
+ Results Breakdown:
    • Approved: {metrics['total_approved']} PRs
    • Conditional: {metrics['total_conditional']} PRs  
    • Rejected: {metrics['total_rejected']} PRs
 
-⚠️  Repository Status: {overall_status}
-🔄 Recommendation: {'Proceed with deployments' if overall_status == 'HEALTHY' else 'Review and improve before deployment'}
+  Repository Status: {overall_status}
+ Recommendation: {'Proceed with deployments' if overall_status == 'HEALTHY' else 'Review and improve before deployment'}
         """
         
         print(simple_summary)
@@ -595,7 +599,7 @@ async def generate_no_pr_llm_summary(repo_url: str):
         """
         
         llm_manager = get_llm_manager()
-        print(f"\n🤖 GENERATING LLM ANALYSIS FOR REPOSITORY STATUS...")
+        print(f"\n GENERATING LLM ANALYSIS FOR REPOSITORY STATUS...")
         print("=" * 60)
         
         try:
@@ -605,9 +609,9 @@ async def generate_no_pr_llm_summary(repo_url: str):
                 summary_response = llm_result['response']
                 provider_used = llm_result['provider_used']
                 
-                print(f"\n📋 REPOSITORY STATUS ANALYSIS")
+                print(f"\n REPOSITORY STATUS ANALYSIS")
                 print("=" * 50)
-                print(f"🤖 Generated by: AI Agent ({provider_used})")
+                print(f" Generated by: AI Agent ({provider_used})")
                 print()
                 
                 summary_lines = summary_response.strip().split('\n')
@@ -616,38 +620,38 @@ async def generate_no_pr_llm_summary(repo_url: str):
                         print(f"   {line.strip()}")
                 
                 print()
-                print(f"✅ Analysis Complete!")
+                print(f" Analysis Complete!")
             else:
                 raise Exception("LLM generation failed")
         
         except Exception:
             # Fallback analysis
-            print(f"\n📋 REPOSITORY STATUS ASSESSMENT")
+            print(f"\n REPOSITORY STATUS ASSESSMENT")
             print("=" * 50)
             
             fallback_analysis = f"""
-🔍 REPOSITORY ANALYSIS: No Active Pull Requests
+ REPOSITORY ANALYSIS: No Active Pull Requests
    
-✅ POSITIVE SCENARIOS:
+ POSITIVE SCENARIOS:
    • Repository may be in stable state with recent releases
    • Development team working in feature branches not yet ready for PR
    • Recently completed major release cycle
    • Well-maintained codebase requiring minimal changes
 
-⚠️  AREAS TO INVESTIGATE:
+  AREAS TO INVESTIGATE:
    • Development activity may have slowed or moved elsewhere
    • PR workflow might not be established or followed
    • Repository could be archived or deprecated
    • Access permissions may be limiting PR visibility
 
-📋 RECOMMENDATIONS:
+ RECOMMENDATIONS:
    • Check recent commit history for development activity
    • Verify repository is actively maintained
    • Review branch structure for ongoing development
    • Confirm PR workflow is properly configured
    • Contact repository maintainers if needed
 
-🔄 NEXT STEPS:
+ NEXT STEPS:
    • Analyze commit frequency and contributors
    • Check for alternative development workflows
    • Verify repository purpose and status
@@ -657,7 +661,7 @@ async def generate_no_pr_llm_summary(repo_url: str):
             print(fallback_analysis)
     
     except ImportError:
-        print(f"\n💡 REPOSITORY STATUS: No PRs found in {repo_url.split('/')[-1].replace('.git', '')}")
+        print(f"\n REPOSITORY STATUS: No PRs found in {repo_url.split('/')[-1].replace('.git', '')}")
 
 # Utility functions for PR analysis
 def determine_affected_modules(pr_data: Dict[str, Any]) -> list:
@@ -755,130 +759,134 @@ async def simulate_plugin_execution(plugin_name: str, context: Dict[str, Any]):
     # Log Agent LLM evaluation results with detailed breakdown
     llm_confidence = 85 + (hash(plugin_name) % 15)
     semantic_risk_score = (hash(plugin_name) % 40) + 30
-    print(f"   ✅ Agent LLM Analysis Complete ({llm_processing_time:.2f}s)")
+    print(f"    Agent LLM Analysis Complete ({llm_processing_time:.2f}s)")
     print(f"       Confidence: {llm_confidence}%")
     print(f"       Semantic Risk Score: {semantic_risk_score}/100")
     print(f"       Processing Method: Transformer-based semantic analysis")
-    print(f"      💡 Context Understanding: {['Adequate', 'Good', 'Excellent'][min(2, llm_confidence // 33)]}")
-    print(f"      🔍 Pattern Recognition: {['Standard', 'Medium', 'High'][min(2, semantic_risk_score // 25)]} complexity")
+    print(f"       Context Understanding: {['Adequate', 'Good', 'Excellent'][min(2, llm_confidence // 33)]}")
+    print(f"       Pattern Recognition: {['Standard', 'Medium', 'High'][min(2, semantic_risk_score // 25)]} complexity")
     
     # Simulate heuristic evaluation phase
     heuristic_processing_time = 0.2 + (hash(plugin_name + "heuristic") % 30) / 100
-    print(f"   📐 Heuristic Evaluation Phase...")
-    print(f"      📏 Applying rule-based analysis")
-    print(f"      🔢 Computing statistical metrics")
+    print(f"    Heuristic Evaluation Phase...")
+    print(f"       Applying rule-based analysis")
+    print(f"       Computing statistical metrics")
     await asyncio.sleep(heuristic_processing_time)
     
 
     # Log heuristic evaluation results with detailed metrics
     pattern_matches = (hash(plugin_name) % 8) + 2
     quantitative_score = (hash(plugin_name) % 30) + 50
-    print(f"   ✅ Heuristic Analysis Complete ({heuristic_processing_time:.2f}s)")
-    print(f"      🎲 Pattern Matches: {pattern_matches}")
-    print(f"      📈 Quantitative Score: {quantitative_score}/100")
-    print(f"      📐 Rule Engine: {['Basic', 'Standard', 'Advanced'][min(2, pattern_matches // 3)]} pattern detection")
-    print(f"      ⚖️  Threshold Analysis: {['Lenient', 'Moderate', 'Strict'][min(2, quantitative_score // 25)]} criteria")
-    print(f"      🔢 Statistical Confidence: {min(95, quantitative_score + 20)}%")
-    print(f"      ⚖️  Threshold Analysis: {['Strict', 'Moderate', 'Lenient'][quantitative_score // 30]} criteria")
-    print(f"      🔢 Statistical Confidence: {min(95, quantitative_score + 20)}%")
+    print(f"    Heuristic Analysis Complete ({heuristic_processing_time:.2f}s)")
+    print(f"       Pattern Matches: {pattern_matches}")
+    print(f"       Quantitative Score: {quantitative_score}/100")
+    print(f"       Rule Engine: {['Basic', 'Standard', 'Advanced'][min(2, pattern_matches // 3)]} pattern detection")
+    print(f"        Threshold Analysis: {['Lenient', 'Moderate', 'Strict'][min(2, quantitative_score // 25)]} criteria")
+    print(f"       Statistical Confidence: {min(95, quantitative_score + 20)}%")
+    print(f"        Threshold Analysis: {['Strict', 'Moderate', 'Lenient'][quantitative_score // 30]} criteria")
+    print(f"       Statistical Confidence: {min(95, quantitative_score + 20)}%")
     
     # Combined evaluation results
     total_processing_time = llm_processing_time + heuristic_processing_time
     combined_confidence = min(95, 80 + (hash(plugin_name) % 15))
     
-    print(f"   🔄 Combining Agent LLM + Heuristic Results...")
-    print(f"   📋 Final Evaluation Results:")
+    print(f"    Combining Agent LLM + Heuristic Results...")
+    print(f"    Final Evaluation Results:")
     
     result = context['analysis_result']
     
 
     # Display plugin-specific results with comprehensive evaluation breakdown
     if plugin_name == "change_log_summarizer":
-        print(f"   📝 Summary: {result['summary']}")
+        print(f"    Summary: {result['summary']}")
         print(f"    Impact Score: {result['impact_score']:.1f}/10")
-        print(f"      🤖 Agent LLM Analysis: You are an Agent doing context understanding and semantic impact")
+        print(f"       Agent LLM Analysis: You are an Agent doing context understanding and semantic impact")
         print(f"         • Content Classification: {['Low-impact', 'Medium-impact', 'High-impact'][min(2, int(result['impact_score']) // 3)]} change")
         print(f"         • Semantic Complexity: {['Simple', 'Moderate', 'Complex'][min(2, len(result['affected_modules']) // 2)]} architecture")
         print(f"         • Business Context: {['Standard', 'Important', 'Critical'][min(2, int(result['impact_score']) // 3)]} priority")
-        print(f"      📐 Heuristic Analysis: Code metrics and statistical patterns")
+        print(f"       Heuristic Analysis: Code metrics and statistical patterns")
         print(f"         • Change Size: {pattern_matches * 15} lines affected")
         print(f"         • Module Coupling: {len(result['affected_modules'])} interconnected components")
         print(f"         • Complexity Score: {quantitative_score}/100 (statistical analysis)")
         print(f"    Affected Modules: {', '.join(result['affected_modules'])}")
         if 'repository' in result:
-            print(f"   🏢 Repository: {result['repository']}")
-        print(f"   🔍 Evaluation Method: Hybrid Agent LLM + Rule-based analysis")
-        print(f"   📈 Change Risk: {['High', 'Medium', 'Low'][int(result['impact_score']) // 3]}")
+            print(f"    Repository: {result['repository']}")
+        print(f"    Evaluation Method: Hybrid Agent LLM + Rule-based analysis")
+        print(f"    Change Risk: {['High', 'Medium', 'Low'][int(result['impact_score']) // 3]}")
     
     elif plugin_name == "security_analyzer":
-        print(f"   🛡️  Security Issues: {result['security_issues']}")
-        print(f"   ✅ Security Improvements: {result['security_improvements']}")
-        print(f"   ⚖️  Risk Reduction: {result['risk_reduction']}")
-        print(f"   📋 Compliance: {result['compliance_status']}")
-        print(f"      🤖 Agent LLM Evaluation: You are an Agent doing natural language security pattern detection")
+        print(f"     Security Issues: {result['security_issues']}")
+        print(f"    Security Improvements: {result['security_improvements']}")
+        print(f"     Risk Reduction: {result['risk_reduction']}")
+        print(f"    Compliance: {result['compliance_status']}")
+        print(f"       Agent LLM Evaluation: You are an Agent doing natural language security pattern detection")
         print(f"         • Vulnerability Assessment: {['Low', 'Moderate', 'Critical'][min(2, result['security_issues'])]} risk level")
         print(f"         • Security Context: {result['risk_reduction']} impact improvement")
         print(f"         • Threat Analysis: {pattern_matches} potential attack vectors identified")
-        print(f"      📐 Heuristic Evaluation: Known vulnerability signature matching")
+        print(f"       Heuristic Evaluation: Known vulnerability signature matching")
         print(f"         • Pattern Database: {pattern_matches * 100} security signatures checked")
         print(f"         • CVE Matching: {quantitative_score // 20} database references")
         print(f"         • Policy Compliance: {min(100, quantitative_score + 20)}% adherence")
         if 'recommendations' in result:
-            print(f"   💡 Recommendations: {', '.join(result['recommendations'])}")
-        print(f"   🔒 Security Framework: OWASP + Custom Walmart policies")
+            print(f"    Recommendations: {', '.join(result['recommendations'])}")
+        print(f"    Security Framework: OWASP + Custom Walmart policies")
         print(f"    Security Score: {100 - result['security_issues'] * 30}/100")
     
     elif plugin_name == "compliance_checker":
-        print(f"   💳 PCI DSS: {result['pci_compliance']}")
-        print(f"   🇪🇺 GDPR: {result['gdpr_compliance']}")
+        print(f"    PCI DSS: {result['pci_compliance']}")
+        print(f"    GDPR: {result['gdpr_compliance']}")
         print(f"    SOX: {result['sox_compliance']}")
-        print(f"   🧪 Code Coverage: {result['code_coverage']}")
-        print(f"      🤖 Agent LLM Evaluation: You are an Agent doing regulatory text analysis and context understanding")
+        print(f"    Code Coverage: {result['code_coverage']}")
+        print(f"       Agent LLM Evaluation: You are an Agent doing regulatory text analysis and context understanding")
         print(f"         • Compliance Context: {['Adequate', 'Good', 'Excellent'][min(2, llm_confidence // 33)]} regulatory alignment")
         print(f"         • Policy Interpretation: {pattern_matches} regulatory clauses analyzed")
         print(f"         • Risk Assessment: {semantic_risk_score}/100 compliance risk score")
-        print(f"      📐 Heuristic Evaluation: Compliance rule engine and pattern matching")
+        print(f"       Heuristic Evaluation: Compliance rule engine and pattern matching")
         print(f"         • Rule Validation: {pattern_matches * 50} compliance rules checked")
         print(f"         • Standard Coverage: {min(4, pattern_matches)} major standards validated")
         print(f"         • Audit Trail: {quantitative_score}% documentation completeness")
-        print(f"   📋 Compliance Framework: Multi-standard validation (PCI/GDPR/SOX)")
-        print(f"   📈 Compliance Score: {(quantitative_score + llm_confidence) // 2}/100")
+        print(f"    Compliance Framework: Multi-standard validation (PCI/GDPR/SOX)")
+        print(f"    Compliance Score: {(quantitative_score + llm_confidence) // 2}/100")
     
     elif plugin_name == "release_decision_agent":
         print(f"    Recommendation: {result['recommendation']}")
-        print(f"   📈 Confidence: {result['confidence']:.0%}")
-        print(f"   ⚠️  Risk Level: {result['risk_level']}")
-        print(f"   🔍 Manual Review: {'Required' if result['manual_review_required'] else 'Not Required'}")
-        print(f"      🤖 Agent LLM Evaluation: You are an Agent doing contextual risk assessment and decision reasoning")
+        print(f"    Confidence: {result['confidence']:.0%}")
+        print(f"     Risk Level: {result['risk_level']}")
+        print(f"    Manual Review: {'Required' if result['manual_review_required'] else 'Not Required'}")
+        print(f"       Agent LLM Evaluation: You are an Agent doing contextual risk assessment and decision reasoning")
         print(f"         • Decision Logic: {['Simple', 'Standard', 'Complex'][min(2, int(result['confidence']*3))]} reasoning path")
         print(f"         • Risk Factors: {pattern_matches} decision criteria evaluated")
         print(f"         • Business Impact: {semantic_risk_score}/100 business risk assessment")
-        print(f"      📐 Heuristic Evaluation: Risk scoring matrix and threshold analysis")
+        print(f"       Heuristic Evaluation: Risk scoring matrix and threshold analysis")
         print(f"         • Threshold Matrix: {pattern_matches}x{pattern_matches} decision grid")
         print(f"         • Score Calculation: {quantitative_score}/100 quantitative risk")
         print(f"         • Approval Gates: {min(5, pattern_matches)} validation checkpoints")
-        print(f"   🎲 Decision Algorithm: Weighted multi-factor analysis")
+        print(f"    Decision Algorithm: Weighted multi-factor analysis")
         print(f"    Final Risk Score: {(100 - quantitative_score) if result['recommendation'] == 'APPROVE' else quantitative_score}/100")
     
     elif plugin_name == "notification_agent":
         notifications = result['notifications_sent']
-        print(f"   📤 Sent: {len(notifications)} notifications")
-        print(f"   📢 Channels: {', '.join(result['channels'])}")
-        print(f"      🤖 LLM Evaluation: Message content generation and audience targeting")
+        print(f"    Sent: {len(notifications)} notifications")
+        print(f"    Channels: {', '.join(result['channels'])}")
+        print(f"       LLM Evaluation: Message content generation and audience targeting")
         print(f"         • Message Personalization: {pattern_matches} stakeholder groups targeted")
         print(f"         • Content Optimization: {llm_confidence}% message relevance")
         print(f"         • Audience Analysis: {semantic_risk_score}/100 targeting accuracy")
-        print(f"      📐 Heuristic Evaluation: Escalation rules and notification routing")
+        print(f"       Heuristic Evaluation: Escalation rules and notification routing")
         print(f"         • Routing Rules: {pattern_matches * 10} notification paths checked")
         print(f"         • Escalation Matrix: {min(3, pattern_matches)} escalation levels")
         print(f"         • Delivery Tracking: {quantitative_score}% successful delivery rate")
-        print(f"   📨 Notification Framework: Multi-channel automated stakeholder alerts")
+        print(f"    Notification Framework: Multi-channel automated stakeholder alerts")
         print(f"    Coverage Score: {min(100, pattern_matches * 20)}/100")
     
-    print(f"   🔗 Combined Confidence: {combined_confidence}%")
-    print(f"   ⏱️  Total Execution Time: {total_processing_time:.2f}s (LLM: {llm_processing_time:.2f}s + Heuristic: {heuristic_processing_time:.2f}s)")
-    print(f"    Final Status: ✅ EVALUATION COMPLETE")
+    print(f"    Combined Confidence: {combined_confidence}%")
+    print(f"   ⏱  Total Execution Time: {total_processing_time:.2f}s (LLM: {llm_processing_time:.2f}s + Heuristic: {heuristic_processing_time:.2f}s)")
+    print(f"    Final Status:  EVALUATION COMPLETE")
     print()
+    
+
+    # Return the analysis result instead of None
+    return result
 
 async def generate_detailed_pr_summary(pr_data: Dict[str, Any], repo_url: str):
     """
@@ -891,55 +899,55 @@ async def generate_detailed_pr_summary(pr_data: Dict[str, Any], repo_url: str):
     pr_deletions = pr_data.get('deletions', 0)
     pr_files = pr_data.get('changed_files', [])
     
-    print(f"\n📋 DETAILED PR ANALYSIS SUMMARY")
+    print(f"\n DETAILED PR ANALYSIS SUMMARY")
     print("=" * 80)
-    print(f"🆔 PR #{pr_number}: {pr_title}")
-    print(f"👤 Author: {pr_author}")
+    print(f" PR #{pr_number}: {pr_title}")
+    print(f" Author: {pr_author}")
     print(f" Changes: +{pr_additions} -{pr_deletions} lines")
-    print(f"📁 Files Modified: {len(pr_files)}")
-    print(f"🔗 Repository: {repo_url.split('/')[-1].replace('.git', '')}")
-    print(f"📈 Data Source: LIVE REPOSITORY DATA")
+    print(f" Files Modified: {len(pr_files)}")
+    print(f" Repository: {repo_url.split('/')[-1].replace('.git', '')}")
+    print(f" Data Source: LIVE REPOSITORY DATA")
     
     # Detailed Analysis Breakdown
-    print(f"\n🔬 ANALYSIS METHODOLOGY BREAKDOWN")
+    print(f"\n ANALYSIS METHODOLOGY BREAKDOWN")
     print("-" * 60)
     
     # LLM Analysis Details
-    print(f"🤖 AGENT LLM ANALYSIS:")
-    print(f"   🧠 Provider: Walmart LLM Gateway (GPT-4)")
-    print(f"   💭 Agent Role: You are an Agent doing comprehensive semantic analysis")
-    print(f"   📝 Analysis Scope:")
+    print(f" AGENT LLM ANALYSIS:")
+    print(f"    Provider: Walmart LLM Gateway (GPT-4)")
+    print(f"    Agent Role: You are an Agent doing comprehensive semantic analysis")
+    print(f"    Analysis Scope:")
     print(f"      • Semantic understanding of change context")
     print(f"      • Natural language processing of PR description")
     print(f"      • Intent classification and risk assessment")
     print(f"      • Business impact evaluation")
     print(f"    LLM Confidence Range: 85-97% across plugins")
-    print(f"   ⏱️  Average LLM Processing Time: 0.45s per plugin")
-    print(f"   🔄 Fallback Strategy: Heuristic analysis on LLM failure")
+    print(f"   ⏱  Average LLM Processing Time: 0.45s per plugin")
+    print(f"    Fallback Strategy: Heuristic analysis on LLM failure")
     
     # Heuristic Analysis Details
-    print(f"\n📐 HEURISTIC ANALYSIS:")
-    print(f"   🔧 Engine: Custom rule-based pattern matching")
-    print(f"   📏 Analysis Components:")
+    print(f"\n HEURISTIC ANALYSIS:")
+    print(f"    Engine: Custom rule-based pattern matching")
+    print(f"    Analysis Components:")
     print(f"      • Pattern Recognition: Security keywords, file extensions")
     print(f"      • Statistical Metrics: Change size, file count, complexity")
     print(f"      • Compliance Rules: Policy violation detection")
     print(f"      • Risk Scoring: Quantitative threshold-based evaluation")
-    print(f"   🎲 Pattern Matches: 2-9 patterns per plugin")
-    print(f"   📈 Heuristic Scores: 30-80 points per plugin")
-    print(f"   ⏱️  Average Processing Time: 0.28s per plugin")
-    print(f"   ✅ Reliability: 100% (deterministic rule-based)")
+    print(f"    Pattern Matches: 2-9 patterns per plugin")
+    print(f"    Heuristic Scores: 30-80 points per plugin")
+    print(f"   ⏱  Average Processing Time: 0.28s per plugin")
+    print(f"    Reliability: 100% (deterministic rule-based)")
     
     # Combined Hybrid Analysis
-    print(f"\n🔄 HYBRID ANALYSIS INTEGRATION:")
-    print(f"   ⚖️  Weighting Strategy: LLM semantic + Heuristic quantitative")
+    print(f"\n HYBRID ANALYSIS INTEGRATION:")
+    print(f"     Weighting Strategy: LLM semantic + Heuristic quantitative")
     print(f"    Final Confidence: Minimum of (LLM confidence, 95%)")
     print(f"    Decision Logic: Combined scoring with threshold validation")
-    print(f"   🛡️  Validation: Cross-verification between methods")
-    print(f"   🔍 Quality Assurance: Dual-path analysis ensures robustness")
+    print(f"     Validation: Cross-verification between methods")
+    print(f"    Quality Assurance: Dual-path analysis ensures robustness")
     
     # Risk Assessment Details
-    print(f"\n⚠️  RISK ASSESSMENT DETAILS:")
+    print(f"\n  RISK ASSESSMENT DETAILS:")
     risk_factors = []
     if pr_additions > 200:
         risk_factors.append("Large code addition (+200 lines)")
@@ -953,12 +961,12 @@ async def generate_detailed_pr_summary(pr_data: Dict[str, Any], repo_url: str):
     if not risk_factors:
         risk_factors.append("Low-risk change profile")
     
-    print(f"   🚨 Identified Risk Factors:")
+    print(f"    Identified Risk Factors:")
     for i, factor in enumerate(risk_factors, 1):
         print(f"      {i}. {factor}")
     
     # Plugin-Specific Analysis Summary
-    print(f"\n🔌 PLUGIN ANALYSIS BREAKDOWN:")
+    print(f"\n PLUGIN ANALYSIS BREAKDOWN:")
     print("-" * 60)
     
     plugins_analysis = [
@@ -1000,10 +1008,10 @@ async def generate_detailed_pr_summary(pr_data: Dict[str, Any], repo_url: str):
     ]
     
     for plugin in plugins_analysis:
-        print(f"   🔌 {plugin['name'].replace('_', ' ').title()}:")
-        print(f"      🤖 LLM Focus: {plugin['llm_focus']}")
-        print(f"      📐 Heuristic Focus: {plugin['heuristic_focus']}")
-        print(f"      🔍 Key Findings: {plugin['key_findings']}")
+        print(f"    {plugin['name'].replace('_', ' ').title()}:")
+        print(f"       LLM Focus: {plugin['llm_focus']}")
+        print(f"       Heuristic Focus: {plugin['heuristic_focus']}")
+        print(f"       Key Findings: {plugin['key_findings']}")
         print(f"       Confidence Range: {plugin['confidence']}")
         print()
     
@@ -1013,10 +1021,10 @@ async def generate_detailed_pr_summary(pr_data: Dict[str, Any], repo_url: str):
     
     print(f" FINAL DECISION SUMMARY:")
     print("-" * 40)
-    print(f"   📋 Overall Risk Level: {overall_risk}")
-    print(f"   ✅ Recommendation: {recommendation}")
-    print(f"   🎲 Decision Confidence: 88-92%")
-    print(f"   🔄 Review Requirements: {'None' if overall_risk == 'LOW' else 'Security team review'}")
+    print(f"    Overall Risk Level: {overall_risk}")
+    print(f"    Recommendation: {recommendation}")
+    print(f"    Decision Confidence: 88-92%")
+    print(f"    Review Requirements: {'None' if overall_risk == 'LOW' else 'Security team review'}")
     print(f"   ⏰ Processing Time: ~4.5 seconds total")
     print(f"    Quality Score: {95 - len(risk_factors) * 5}%")
 
@@ -1100,10 +1108,10 @@ async def generate_llm_user_friendly_summary(pr_data: Dict[str, Any], repo_url: 
         # Get LLM manager and generate summary
         llm_manager = get_llm_manager()
         
-        print(f"\n🤖 GENERATING LLM-POWERED EXECUTIVE SUMMARY...")
+        print(f"\n GENERATING LLM-POWERED EXECUTIVE SUMMARY...")
         print("=" * 60)
         print(f" Agent Role: You are an Agent doing business communication")
-        print(f"💭 Generating user-friendly analysis summary...")
+        print(f" Generating user-friendly analysis summary...")
         
         # Make LLM call
         try:
@@ -1113,10 +1121,10 @@ async def generate_llm_user_friendly_summary(pr_data: Dict[str, Any], repo_url: 
                 summary_response = llm_result['response']
                 provider_used = llm_result['provider_used']
                 
-                print(f"\n📋 EXECUTIVE SUMMARY")
+                print(f"\n EXECUTIVE SUMMARY")
                 print("=" * 50)
                 print(f" Generated by: AI Agent ({provider_used})")
-                print(f"📝 Summary:")
+                print(f" Summary:")
                 print()
                 
                 # Format and display the LLM-generated summary
@@ -1126,53 +1134,53 @@ async def generate_llm_user_friendly_summary(pr_data: Dict[str, Any], repo_url: 
                         print(f"   {line.strip()}")
                 
                 print()
-                print(f"✅ Executive Summary Complete!")
-                print(f"⏱️  Generation Time: ~2.5 seconds")
+                print(f" Executive Summary Complete!")
+                print(f"⏱  Generation Time: ~2.5 seconds")
                 print(f" Summary Quality: AI-optimized for business stakeholders")
             else:
                 raise Exception("LLM generation failed")
             
         except Exception as llm_error:
             # Fallback to template-based summary if LLM fails
-            print(f"⚠️  LLM unavailable, generating template-based summary...")
+            print(f"  LLM unavailable, generating template-based summary...")
             print()
             
 
             fallback_summary = f"""
-📋 EXECUTIVE SUMMARY (AI-Enhanced Business Report)
+ EXECUTIVE SUMMARY (AI-Enhanced Business Report)
 ================================================
 
-🔍 WHAT WE ANALYZED:
+ WHAT WE ANALYZED:
    We conducted a comprehensive security and quality review of Pull Request #{pr_number} 
    titled "{pr_title}" from the {repo_name} repository. This code change involves 
    {pr_additions + pr_deletions} lines across {len(pr_files)} files and represents 
    {'a routine security improvement' if 'security' in pr_title.lower() else 'a standard code update'}.
 
-💡 KEY FINDINGS & SAFETY ASSESSMENT:
-   ✅ Security Check: No critical vulnerabilities detected - your systems remain secure
-   ✅ Compliance Status: Fully compliant with industry standards (PCI-DSS, GDPR, SOX)
-   ✅ Code Quality: Changes follow established best practices and company standards
-   ✅ Business Risk: {overall_risk.upper()} impact to business operations and revenue
+ KEY FINDINGS & SAFETY ASSESSMENT:
+    Security Check: No critical vulnerabilities detected - your systems remain secure
+    Compliance Status: Fully compliant with industry standards (PCI-DSS, GDPR, SOX)
+    Code Quality: Changes follow established best practices and company standards
+    Business Risk: {overall_risk.upper()} impact to business operations and revenue
 
-🎯 BUSINESS RECOMMENDATION:
+ BUSINESS RECOMMENDATION:
    This pull request is **{recommendation.upper()}** for immediate deployment to production.
    Our analysis shows 88% confidence in this assessment based on comprehensive 
    dual-method evaluation (AI semantic analysis + rule-based validation).
    
-   {'✅ NO ADDITIONAL APPROVALS NEEDED - Safe to proceed with deployment' if overall_risk == 'LOW' 
-    else '⚠️  RECOMMEND SECURITY TEAM REVIEW before deployment as precautionary measure'}
+   {' NO ADDITIONAL APPROVALS NEEDED - Safe to proceed with deployment' if overall_risk == 'LOW' 
+    else '  RECOMMEND SECURITY TEAM REVIEW before deployment as precautionary measure'}
 
-📈 BUSINESS VALUE & BENEFITS:
+ BUSINESS VALUE & BENEFITS:
    • Enhanced security posture protecting customer data and company assets
    • Maintained regulatory compliance reducing legal and financial risks  
    • Improved system reliability and reduced potential downtime
    • Continued adherence to quality standards supporting operational excellence
 
-🔄 NEXT STEPS:
-   {'✅ Deploy to production at your convenience' if overall_risk == 'LOW' 
-    else '📋 Schedule security team review, then deploy after approval'}
-   📊 Estimated deployment time: 15-30 minutes
-   🔄 Rollback plan: Available if needed (low probability)
+ NEXT STEPS:
+   {' Deploy to production at your convenience' if overall_risk == 'LOW' 
+    else ' Schedule security team review, then deploy after approval'}
+    Estimated deployment time: 15-30 minutes
+    Rollback plan: Available if needed (low probability)
             """
             
             print(fallback_summary)
@@ -1180,7 +1188,7 @@ async def generate_llm_user_friendly_summary(pr_data: Dict[str, Any], repo_url: 
     except ImportError:
 
         # Fallback when LLM integration is not available
-        print(f"\n📋 BUSINESS-FRIENDLY SUMMARY (Standalone Mode)")
+        print(f"\n BUSINESS-FRIENDLY SUMMARY (Standalone Mode)")
         print("=" * 55)
         
         repo_name = repo_url.split('/')[-1].replace('.git', '')
@@ -1194,24 +1202,24 @@ async def generate_llm_user_friendly_summary(pr_data: Dict[str, Any], repo_url: 
         recommendation = "APPROVED" if overall_risk == "LOW" else "CONDITIONAL APPROVAL"
         
         simple_summary = f"""
-🔍 EXECUTIVE ANALYSIS OVERVIEW:
+ EXECUTIVE ANALYSIS OVERVIEW:
    We have completed a thorough quality and security review of Pull Request #{pr_number} 
    titled "{pr_title}" from the {repo_name} repository. This code modification impacts 
    {len(pr_files)} files with {pr_additions + pr_deletions} total line changes.
 
-✅ BUSINESS RECOMMENDATION:
+ BUSINESS RECOMMENDATION:
    Status: **{recommendation}** with **{overall_risk}** business risk assessment.
-   Action: {'✅ Proceed with immediate deployment - no additional approvals required' if overall_risk == 'LOW' 
-           else '⚠️  Recommend security team review before deployment'}
+   Action: {' Proceed with immediate deployment - no additional approvals required' if overall_risk == 'LOW' 
+           else '  Recommend security team review before deployment'}
 
-🛡️  COMPREHENSIVE SAFETY VALIDATION:
-   • Security Assessment: ✅ No critical vulnerabilities detected
-   • Regulatory Compliance: ✅ Meets PCI-DSS, GDPR, and SOX standards  
-   • Code Quality Standards: ✅ Follows established best practices
-   • Business Impact Analysis: ✅ {overall_risk} risk to operations
-   • Confidence Level: ✅ 88% assessment reliability
+  COMPREHENSIVE SAFETY VALIDATION:
+   • Security Assessment:  No critical vulnerabilities detected
+   • Regulatory Compliance:  Meets PCI-DSS, GDPR, and SOX standards  
+   • Code Quality Standards:  Follows established best practices
+   • Business Impact Analysis:  {overall_risk} risk to operations
+   • Confidence Level:  88% assessment reliability
 
-📈 BUSINESS VALUE DELIVERED:
+ BUSINESS VALUE DELIVERED:
    • Enhanced system security protecting customer data and revenue
    • Maintained regulatory compliance reducing legal exposure
    • Improved code quality supporting long-term maintainability
@@ -1268,13 +1276,14 @@ Supported Git providers:
     return parser.parse_args()
 
 async def analyze_multiple_repositories(repo_urls: list, pr_limit: int):
-    """::: Code Generated by Copilot a7b3d9e2-5f1c-4a8b-9d2e-6f8a1b3c5d7e. This comment will be removed automatically after the file is saved :::
+
+    """
     Analyze multiple repositories and generate comprehensive summary report"""
     print("\n" + "="*80)
-    print("🚀 MULTI-REPOSITORY PR ANALYSIS FRAMEWORK")
+    print(" MULTI-REPOSITORY PR ANALYSIS FRAMEWORK")
     print("="*80)
-    print(f"📊 Total Repositories to Analyze: {len(repo_urls)}")
-    print(f"🔍 PR Limit per Repository: {pr_limit}")
+    print(f" Total Repositories to Analyze: {len(repo_urls)}")
+    print(f" PR Limit per Repository: {pr_limit}")
     print("="*80)
     
     all_results = []
@@ -1282,7 +1291,7 @@ async def analyze_multiple_repositories(repo_urls: list, pr_limit: int):
     # Analyze each repository
     for idx, repo_url in enumerate(repo_urls, 1):
         print(f"\n\n{'#'*80}")
-        print(f"📂 REPOSITORY {idx}/{len(repo_urls)}: {repo_url.split('/')[-1].replace('.git', '')}")
+        print(f" REPOSITORY {idx}/{len(repo_urls)}: {repo_url.split('/')[-1].replace('.git', '')}")
         print(f"{'#'*80}")
         
         repo_result = await analyze_single_repository(repo_url, pr_limit)
@@ -1292,11 +1301,12 @@ async def analyze_multiple_repositories(repo_urls: list, pr_limit: int):
     await generate_comprehensive_summary_report(all_results)
 
 async def analyze_single_repository(repo_url: str, pr_limit: int):
-    """::: Code Generated by Copilot a7b3d9e2-5f1c-4a8b-9d2e-6f8a1b3c5d7e. This comment will be removed automatically after the file is saved :::
+
+    """
     Analyze a single repository and return results"""
     repo_name = repo_url.split('/')[-1].replace('.git', '')
     
-    print(f"\n🔧 Environment Configuration Status:")
+    print(f"\n Environment Configuration Status:")
     print("-" * 40)
     
     env_config = get_env_config()
@@ -1304,16 +1314,16 @@ async def analyze_single_repository(repo_url: str, pr_limit: int):
     git_config = env_config.get_git_config()
     
     print(f"Agent LLM Provider: {llm_config['provider']}")
-    print(f"Walmart Agent LLM Gateway: {'✅ Configured' if llm_config.get('walmart_llm_gateway_key') else '⚠️  Not configured'}")
-    print(f"Git Access Token: {'✅ Configured' if git_config.get('access_token') else '❌ Not configured'}")
+    print(f"Walmart Agent LLM Gateway: {' Configured' if llm_config.get('walmart_llm_gateway_key') else '  Not configured'}")
+    print(f"Git Access Token: {' Configured' if git_config.get('access_token') else ' Not configured'}")
     
     # Fetch PRs from repository
-    print(f"\n🔍 FETCHING PRS FROM REPOSITORY")
+    print(f"\n FETCHING PRS FROM REPOSITORY")
     print("=" * 60)
     git_prs = await fetch_repository_prs(repo_url, pr_limit)
     
     if not git_prs or len(git_prs) == 0:
-        print(f"\n❌ NO PULL REQUESTS FOUND IN {repo_name.upper()} REPOSITORY")
+        print(f"\n NO PULL REQUESTS FOUND IN {repo_name.upper()} REPOSITORY")
         return {
             'repo_url': repo_url,
             'repo_name': repo_name,
@@ -1322,14 +1332,14 @@ async def analyze_single_repository(repo_url: str, pr_limit: int):
             'status': 'NO_PRS'
         }
     
-    print(f"\n✅ FOUND {len(git_prs)} REAL PRS FROM {repo_name.upper()} REPOSITORY")
-    print(f"📊 Analyzing each PR with comprehensive LLM evaluation...")
+    print(f"\n FOUND {len(git_prs)} REAL PRS FROM {repo_name.upper()} REPOSITORY")
+    print(f" Analyzing each PR with comprehensive LLM evaluation...")
     
     # Analyze each PR
     pr_results = []
     for idx, pr_data in enumerate(git_prs, 1):
         print(f"\n{'='*80}")
-        print(f"🔍 PR ANALYSIS #{idx}/{len(git_prs)}: DETAILED LLM EVALUATION")
+        print(f" PR ANALYSIS #{idx}/{len(git_prs)}: DETAILED LLM EVALUATION")
         print(f"{'='*80}")
         
         pr_result = await analyze_single_pr_with_llm(pr_data, repo_url, idx, len(git_prs))
@@ -1368,10 +1378,11 @@ async def analyze_single_repository(repo_url: str, pr_limit: int):
     }
 
 async def generate_comprehensive_summary_report(all_results: list):
-    """::: Code Generated by Copilot a7b3d9e2-5f1c-4a8b-9d2e-6f8a1b3c5d7e. This comment will be removed automatically after the file is saved :::
+
+    """
     Generate comprehensive summary report for all analyzed repositories"""
     print(f"\n\n{'='*80}")
-    print("📊 COMPREHENSIVE MULTI-REPOSITORY SUMMARY REPORT")
+    print(" COMPREHENSIVE MULTI-REPOSITORY SUMMARY REPORT")
     print(f"{'='*80}")
     
     # Overall statistics
@@ -1379,14 +1390,14 @@ async def generate_comprehensive_summary_report(all_results: list):
     repos_with_prs = sum(1 for r in all_results if r['status'] == 'ANALYZED')
     total_prs_analyzed = sum(r['prs_found'] for r in all_results)
     
-    print(f"\n📈 OVERALL STATISTICS:")
+    print(f"\n OVERALL STATISTICS:")
     print("-" * 50)
     print(f"Total Repositories Analyzed: {total_repos}")
     print(f"Repositories with PRs: {repos_with_prs}")
     print(f"Total PRs Analyzed: {total_prs_analyzed}")
     
     if repos_with_prs == 0:
-        print(f"\n⚠️  No pull requests found in any repository.")
+        print(f"\n  No pull requests found in any repository.")
         return
     
     # Aggregate metrics across all repositories
@@ -1402,40 +1413,40 @@ async def generate_comprehensive_summary_report(all_results: list):
     all_medium_risk = sum(r['metrics']['risk_distribution']['medium'] for r in analyzed_repos)
     all_high_risk = sum(r['metrics']['risk_distribution']['high'] for r in analyzed_repos)
     
-    print(f"\n📋 AGGREGATE PR VERDICTS:")
+    print(f"\n AGGREGATE PR VERDICTS:")
     print("-" * 50)
-    print(f"✅ Approved PRs: {all_approved} ({all_approved/total_prs_analyzed*100:.1f}%)")
-    print(f"⚠️  Conditional PRs: {all_conditional} ({all_conditional/total_prs_analyzed*100:.1f}%)")
-    print(f"❌ Rejected PRs: {all_rejected} ({all_rejected/total_prs_analyzed*100:.1f}%)")
+    print(f" Approved PRs: {all_approved} ({all_approved/total_prs_analyzed*100:.1f}%)")
+    print(f"  Conditional PRs: {all_conditional} ({all_conditional/total_prs_analyzed*100:.1f}%)")
+    print(f" Rejected PRs: {all_rejected} ({all_rejected/total_prs_analyzed*100:.1f}%)")
     
-    print(f"\n📊 AGGREGATE RISK DISTRIBUTION:")
+    print(f"\n AGGREGATE RISK DISTRIBUTION:")
     print("-" * 50)
     print(f"🟢 Low Risk: {all_low_risk} PRs ({all_low_risk/total_prs_analyzed*100:.1f}%)")
     print(f"🟡 Medium Risk: {all_medium_risk} PRs ({all_medium_risk/total_prs_analyzed*100:.1f}%)")
-    print(f"🔴 High Risk: {all_high_risk} PRs ({all_high_risk/total_prs_analyzed*100:.1f}%)")
+    print(f" High Risk: {all_high_risk} PRs ({all_high_risk/total_prs_analyzed*100:.1f}%)")
     
-    print(f"\n📈 AGGREGATE QUALITY METRICS:")
+    print(f"\n AGGREGATE QUALITY METRICS:")
     print("-" * 50)
-    print(f"🎯 Average Confidence: {overall_avg_confidence:.1f}%")
-    print(f"📊 Average Quality Score: {overall_avg_score:.1f}/100")
+    print(f" Average Confidence: {overall_avg_confidence:.1f}%")
+    print(f" Average Quality Score: {overall_avg_score:.1f}/100")
     
     # Per-repository breakdown
     print(f"\n\n{'='*80}")
-    print("📂 PER-REPOSITORY BREAKDOWN")
+    print(" PER-REPOSITORY BREAKDOWN")
     print(f"{'='*80}")
     
     for idx, result in enumerate(all_results, 1):
         print(f"\n{idx}. Repository: {result['repo_name']}")
-        print(f"   🔗 URL: {result['repo_url']}")
-        print(f"   📊 PRs Found: {result['prs_found']}")
+        print(f"    URL: {result['repo_url']}")
+        print(f"    PRs Found: {result['prs_found']}")
         
         if result['status'] == 'ANALYZED':
             metrics = result['metrics']
-            print(f"   ✅ Approved: {metrics['total_approved']}, ⚠️  Conditional: {metrics['total_conditional']}, ❌ Rejected: {metrics['total_rejected']}")
-            print(f"   🎯 Confidence: {metrics['avg_confidence']:.1f}%, Score: {metrics['avg_score']:.1f}/100")
-            print(f"   📈 Risk: 🟢{metrics['risk_distribution']['low']} 🟡{metrics['risk_distribution']['medium']} 🔴{metrics['risk_distribution']['high']}")
+            print(f"    Approved: {metrics['total_approved']},   Conditional: {metrics['total_conditional']},  Rejected: {metrics['total_rejected']}")
+            print(f"    Confidence: {metrics['avg_confidence']:.1f}%, Score: {metrics['avg_score']:.1f}/100")
+            print(f"    Risk: 🟢{metrics['risk_distribution']['low']} 🟡{metrics['risk_distribution']['medium']} {metrics['risk_distribution']['high']}")
         else:
-            print(f"   ⚠️  Status: No PRs found")
+            print(f"     Status: No PRs found")
     
     # Generate LLM-powered executive summary
     await generate_multi_repo_llm_summary(all_results, {
@@ -1454,11 +1465,12 @@ async def generate_comprehensive_summary_report(all_results: list):
     })
     
     print(f"\n{'='*80}")
-    print("✅ MULTI-REPOSITORY ANALYSIS COMPLETE!")
+    print(" MULTI-REPOSITORY ANALYSIS COMPLETE!")
     print(f"{'='*80}")
 
 async def generate_multi_repo_llm_summary(all_results: list, aggregate_metrics: dict):
-    """::: Code Generated by Copilot a7b3d9e2-5f1c-4a8b-9d2e-6f8a1b3c5d7e. This comment will be removed automatically after the file is saved :::
+
+    """
     Generate LLM-powered executive summary for multi-repository analysis"""
     
     # Prepare context for LLM
@@ -1506,7 +1518,7 @@ async def generate_multi_repo_llm_summary(all_results: list, aggregate_metrics: 
     
     llm_manager = get_llm_manager()
     print(f"\n\n{'='*80}")
-    print("🤖 EXECUTIVE SUMMARY - AI-POWERED ANALYSIS")
+    print(" EXECUTIVE SUMMARY - AI-POWERED ANALYSIS")
     print(f"{'='*80}")
     
     try:
@@ -1516,8 +1528,8 @@ async def generate_multi_repo_llm_summary(all_results: list, aggregate_metrics: 
             summary_response = llm_result['response']
             provider_used = llm_result['provider_used']
             
-            print(f"🤖 Generated by: AI Agent ({provider_used})")
-            print(f"📊 Analysis Scope: {aggregate_metrics['total_repos']} repositories, {aggregate_metrics['total_prs']} PRs")
+            print(f" Generated by: AI Agent ({provider_used})")
+            print(f" Analysis Scope: {aggregate_metrics['total_repos']} repositories, {aggregate_metrics['total_prs']} PRs")
             print("\n" + "-" * 80)
             
             summary_lines = summary_response.strip().split('\n')
@@ -1531,18 +1543,18 @@ async def generate_multi_repo_llm_summary(all_results: list, aggregate_metrics: 
         # Fallback summary
         overall_health = "EXCELLENT" if aggregate_metrics['avg_score'] >= 85 else "GOOD" if aggregate_metrics['avg_score'] >= 70 else "NEEDS_ATTENTION"
         
-        print(f"\n🏢 PORTFOLIO HEALTH: {overall_health}")
+        print(f"\n PORTFOLIO HEALTH: {overall_health}")
         print(f"   Analyzed {aggregate_metrics['total_repos']} repositories with {aggregate_metrics['total_prs']} total pull requests")
         print(f"   Overall quality score: {aggregate_metrics['avg_score']:.1f}/100")
-        print(f"\n📊 APPROVAL SUMMARY:")
-        print(f"   ✅ {aggregate_metrics['approved']} PRs ready for immediate deployment ({aggregate_metrics['approved']/aggregate_metrics['total_prs']*100:.1f}%)")
-        print(f"   ⚠️  {aggregate_metrics['conditional']} PRs require additional review ({aggregate_metrics['conditional']/aggregate_metrics['total_prs']*100:.1f}%)")
-        print(f"   ❌ {aggregate_metrics['rejected']} PRs blocked from release ({aggregate_metrics['rejected']/aggregate_metrics['total_prs']*100:.1f}%)")
-        print(f"\n⚠️  RISK ASSESSMENT:")
+        print(f"\n APPROVAL SUMMARY:")
+        print(f"    {aggregate_metrics['approved']} PRs ready for immediate deployment ({aggregate_metrics['approved']/aggregate_metrics['total_prs']*100:.1f}%)")
+        print(f"     {aggregate_metrics['conditional']} PRs require additional review ({aggregate_metrics['conditional']/aggregate_metrics['total_prs']*100:.1f}%)")
+        print(f"    {aggregate_metrics['rejected']} PRs blocked from release ({aggregate_metrics['rejected']/aggregate_metrics['total_prs']*100:.1f}%)")
+        print(f"\n  RISK ASSESSMENT:")
         print(f"   🟢 {aggregate_metrics['risk_distribution']['low']} Low Risk PRs - Safe for production")
         print(f"   🟡 {aggregate_metrics['risk_distribution']['medium']} Medium Risk PRs - Monitor carefully")
-        print(f"   🔴 {aggregate_metrics['risk_distribution']['high']} High Risk PRs - Immediate attention required")
-        print(f"\n📈 STRATEGIC RECOMMENDATIONS:")
+        print(f"    {aggregate_metrics['risk_distribution']['high']} High Risk PRs - Immediate attention required")
+        print(f"\n STRATEGIC RECOMMENDATIONS:")
         if overall_health == "EXCELLENT":
             print(f"   • Maintain current development practices across all repositories")
             print(f"   • Continue automated quality checks and risk assessment")
@@ -1562,13 +1574,13 @@ if __name__ == "__main__":
     # Configure logging level
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-        print("🔧 Verbose logging enabled")
+        print(" Verbose logging enabled")
     
     # Display startup information
-    print(f"\n🔗 Repositories specified: {len(args.repos)}")
+    print(f"\n Repositories specified: {len(args.repos)}")
     for idx, repo in enumerate(args.repos, 1):
         print(f"   {idx}. {repo}")
-    print(f"🔍 PR limit per repository: {args.limit}")
+    print(f" PR limit per repository: {args.limit}")
     
     # Run multi-repository analysis
     asyncio.run(analyze_multiple_repositories(args.repos, args.limit))

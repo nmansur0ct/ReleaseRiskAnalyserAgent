@@ -112,7 +112,7 @@ class MockEnvironmentConfig:
 async def test_git_integration():
     """Test Git integration functionality"""
     
-    print("🔗 Git Integration Test")
+    print(" Git Integration Test")
     print("="*50)
     
     # Create mock managers
@@ -124,16 +124,16 @@ async def test_git_integration():
     git_config = env_config.get_git_config()
     llm_config = env_config.get_llm_config()
     
-    print(f"\n🔧 Configuration:")
-    print(f"Git Token: {'✅ Set' if git_config['access_token'] else '⚠️  Using mock data'}")
+    print(f"\n Configuration:")
+    print(f"Git Token: {' Set' if git_config['access_token'] else '  Using mock data'}")
     print(f"Repo URL: {git_config['default_repo_url']}")
     print(f"LLM Provider: {llm_config['provider']}")
     print(f"LLM Gateway: {llm_config['walmart_llm_gateway_url']}")
-    print(f"LLM Key: {'✅ Configured' if llm_config['walmart_llm_gateway_key'] else '❌ Missing'}")
+    print(f"LLM Key: {' Configured' if llm_config['walmart_llm_gateway_key'] else ' Missing'}")
     
     # Test fetching recent PRs
     repo_url = git_config['default_repo_url']
-    print(f"\n📋 Fetching Recent PRs from: {repo_url}")
+    print(f"\n Fetching Recent PRs from: {repo_url}")
     
     recent_prs = await git_manager.fetch_pull_requests(repo_url, limit=3)
     
@@ -144,7 +144,7 @@ async def test_git_integration():
         print(f"   Files: {pr['changed_files_count']}")
         
         # Test LLM analysis
-        print(f"\n   🤖 Walmart LLM Gateway Analysis:")
+        print(f"\n    Walmart LLM Gateway Analysis:")
         
         analysis_data = {
             'title': pr['title'],
@@ -166,12 +166,12 @@ async def test_git_integration():
                     print(f"     {line.strip()}")
             print(f"     ... (truncated)")
         else:
-            print(f"   ❌ Analysis failed")
+            print(f"    Analysis failed")
 
 async def test_specific_pr():
     """Test specific PR analysis"""
     
-    print(f"\n\n🎯 Specific PR Analysis Test")
+    print(f"\n\n Specific PR Analysis Test")
     print("="*50)
     
     git_manager = MockGitManager()
@@ -181,23 +181,23 @@ async def test_specific_pr():
     repo_url = "https://gecgithub01.walmart.com/n0m08hp/TransactionPatterns.git"
     pr_number = 42
     
-    print(f"\n📥 Analyzing PR #{pr_number}")
+    print(f"\n Analyzing PR #{pr_number}")
     
     pr_data = await git_manager.fetch_pull_request(repo_url, pr_number)
     
-    print(f"\n📋 PR Details:")
+    print(f"\n PR Details:")
     print(f"Title: {pr_data['title']}")
     print(f"Author: {pr_data['author']}")
     print(f"State: {pr_data['state']}")
     print(f"Changes: +{pr_data['additions']} -{pr_data['deletions']}")
     print(f"Labels: {', '.join(pr_data['labels'])}")
     
-    print(f"\n📁 Changed Files:")
+    print(f"\n Changed Files:")
     for file in pr_data['changed_files'][:5]:
         print(f"   - {file}")
     
     # Comprehensive analysis
-    print(f"\n🔍 Risk Analysis Pipeline:")
+    print(f"\n Risk Analysis Pipeline:")
     
     # Simulate plugin analysis pipeline
     await simulate_analysis_pipeline(pr_data)
@@ -206,10 +206,10 @@ async def simulate_analysis_pipeline(pr_data):
     """Simulate the plugin analysis pipeline"""
     
     plugins = [
-        ("Change Log Summarizer", "🔍"),
-        ("Security Analyzer", "🔒"), 
-        ("Compliance Checker", "✅"),
-        ("Release Decision Agent", "🚦")
+        ("Change Log Summarizer", ""),
+        ("Security Analyzer", ""), 
+        ("Compliance Checker", ""),
+        ("Release Decision Agent", "")
     ]
     
     for plugin_name, icon in plugins:
@@ -223,12 +223,12 @@ async def simulate_analysis_pipeline(pr_data):
             
         elif "Compliance" in plugin_name:
             compliant = pr_data['additions'] < 500
-            print(f"   Status: {'✅ COMPLIANT' if compliant else '❌ REVIEW REQUIRED'}")
+            print(f"   Status: {' COMPLIANT' if compliant else ' REVIEW REQUIRED'}")
             print(f"   Standards: SOX, GDPR, PCI-DSS")
             
         elif "Decision" in plugin_name:
             approved = pr_data['additions'] < 300 and pr_data['changed_files_count'] < 10
-            print(f"   Decision: {'✅ APPROVED' if approved else '⚠️  MANUAL REVIEW'}")
+            print(f"   Decision: {' APPROVED' if approved else '  MANUAL REVIEW'}")
             print(f"   Confidence: {85 if approved else 65}%")
             
         else:
@@ -238,7 +238,7 @@ async def simulate_analysis_pipeline(pr_data):
 def show_environment_info():
     """Show current environment configuration"""
     
-    print("🔧 Environment Configuration Check")
+    print(" Environment Configuration Check")
     print("="*50)
     
     env_vars = [
@@ -249,7 +249,7 @@ def show_environment_info():
         'LLM_PROVIDER'
     ]
     
-    print("\n📋 Environment Variables:")
+    print("\n Environment Variables:")
     for var in env_vars:
         value = os.getenv(var)
         if var.endswith('_KEY') or var.endswith('_TOKEN'):
@@ -257,13 +257,13 @@ def show_environment_info():
         else:
             display_value = value or 'Not set'
         
-        status = '✅' if value else '⚠️ '
+        status = '' if value else ' '
         print(f"   {status} {var}: {display_value}")
 
 async def main():
     """Main test function"""
     
-    print("🚀 Git Integration & Walmart LLM Gateway Test Suite")
+    print(" Git Integration & Walmart LLM Gateway Test Suite")
     print("="*80)
     
     # Show environment info
@@ -276,14 +276,14 @@ async def main():
         # Test specific PR analysis  
         await test_specific_pr()
         
-        print(f"\n\n✅ All tests completed successfully!")
-        print(f"📝 Next steps:")
+        print(f"\n\n All tests completed successfully!")
+        print(f" Next steps:")
         print(f"   1. Configure real Git access token for live data")
         print(f"   2. Verify Walmart LLM Gateway connectivity") 
         print(f"   3. Test with your specific repository")
         
     except Exception as e:
-        print(f"\n❌ Test failed: {e}")
+        print(f"\n Test failed: {e}")
         import traceback
         traceback.print_exc()
 

@@ -13,4 +13,4 @@ Test Repository Assessment:
 """
 
 print(test_string)
-print("✅ Syntax test passed!")
+print(" Syntax test passed!")
