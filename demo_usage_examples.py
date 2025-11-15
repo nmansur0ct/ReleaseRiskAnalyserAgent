@@ -11,8 +11,8 @@ import os
 def run_demo_example(description, command):
     """Run a demo example with description"""
     print(f"\n{'='*80}")
-    print(f"🎯 {description}")
-    print(f"💻 Command: {command}")
+    print(f" {description}")
+    print(f" Command: {command}")
     print(f"{'='*80}")
     
     try:
@@ -32,19 +32,19 @@ def run_demo_example(description, command):
                 print(f"... (output truncated, showing first 30 lines of {len(lines)} total)")
         
         if result.stderr:
-            print(f"⚠️ Errors: {result.stderr}")
+            print(f" Errors: {result.stderr}")
         
-        print(f"✅ Exit code: {result.returncode}")
+        print(f" Exit code: {result.returncode}")
         
     except subprocess.TimeoutExpired:
         print("⏰ Command timed out (60s limit)")
     except Exception as e:
-        print(f"❌ Error running command: {e}")
+        print(f" Error running command: {e}")
 
 def main():
     """Demonstrate various usage patterns of the enhanced simple_demo.py"""
     
-    print("🚀 Release Risk Analyzer Agent - Command Line Demo Examples")
+    print(" Release Risk Analyzer Agent - Command Line Demo Examples")
     print("="*80)
     print("This script demonstrates the enhanced simple_demo.py with command line arguments")
     
@@ -55,7 +55,7 @@ def main():
     )
     
     # Example 2: Default repository
-    print(f"\n📝 Note: The following examples would run full analysis but are commented out")
+    print(f"\n Note: The following examples would run full analysis but are commented out")
     print(f"   to avoid overwhelming output. Uncomment to test:")
     print()
     
@@ -74,34 +74,34 @@ def main():
     ]
     
     for description, command in examples:
-        print(f"🔹 {description}:")
+        print(f" {description}:")
         print(f"   {command}")
         print()
     
-    print("🎯 Key Features of Enhanced simple_demo.py:")
+    print(" Key Features of Enhanced simple_demo.py:")
     print("="*60)
-    print("✅ Command line argument support for repository URL")
-    print("✅ Configurable PR fetch limit")
-    print("✅ Verbose logging option")
-    print("✅ Dynamic repository analysis")
-    print("✅ Real-time PR fetching from specified repositories")
-    print("✅ Agent-centric LLM analysis with Walmart LLM Gateway")
-    print("✅ Comprehensive plugin framework evaluation")
-    print("✅ Support for multiple Git providers (GitHub, GitHub Enterprise, GitLab)")
+    print(" Command line argument support for repository URL")
+    print(" Configurable PR fetch limit")
+    print(" Verbose logging option")
+    print(" Dynamic repository analysis")
+    print(" Real-time PR fetching from specified repositories")
+    print(" Agent-centric LLM analysis with Walmart LLM Gateway")
+    print(" Comprehensive plugin framework evaluation")
+    print(" Support for multiple Git providers (GitHub, GitHub Enterprise, GitLab)")
     
-    print("\n📊 Supported Repository Types:")
+    print("\n Supported Repository Types:")
     print("-"*40)
-    print("🔹 GitHub: https://github.com/user/repo.git")
-    print("🔹 GitHub Enterprise: https://gecgithub01.walmart.com/team/project.git")
-    print("🔹 GitLab: https://gitlab.com/group/project.git")
-    print("🔹 Other Git providers (with appropriate configuration)")
+    print(" GitHub: https://github.com/user/repo.git")
+    print(" GitHub Enterprise: https://gecgithub01.walmart.com/team/project.git")
+    print(" GitLab: https://gitlab.com/group/project.git")
+    print(" Other Git providers (with appropriate configuration)")
     
-    print("\n🔧 Environment Requirements:")
+    print("\n Environment Requirements:")
     print("-"*40)
-    print("✅ Git access token configured in .env file")
-    print("✅ Walmart LLM Gateway credentials")
-    print("✅ Python environment with required dependencies")
-    print("✅ Network access to target repositories")
+    print(" Git access token configured in .env file")
+    print(" Walmart LLM Gateway credentials")
+    print(" Python environment with required dependencies")
+    print(" Network access to target repositories")
 
 if __name__ == "__main__":
     main()

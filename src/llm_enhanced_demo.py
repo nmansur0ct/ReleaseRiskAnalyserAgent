@@ -768,7 +768,7 @@ class ComplianceCheckerAgent(BaseLLMAgent):
 async def run_llm_enhanced_demo():
     """Run the LLM-enhanced release risk analysis demo."""
     
-    print("🤖 LLM-Enhanced Release Risk Analyzer Demo")
+    print(" LLM-Enhanced Release Risk Analyzer Demo")
     print("=" * 60)
     
     # Test scenarios with different analysis modes
@@ -815,7 +815,7 @@ async def run_llm_enhanced_demo():
     
     # Process each scenario
     for scenario in scenarios:
-        print(f"\n📋 Scenario: {scenario['name']}")
+        print(f"\n Scenario: {scenario['name']}")
         print(f"   Analysis Mode: {scenario['state'].analysis_mode.value}")
         print("-" * 50)
         
@@ -823,50 +823,50 @@ async def run_llm_enhanced_demo():
         
         try:
             # Agent 1: Change Log Summarizer
-            print("🔍 Change Log Summarizer Agent...")
+            print(" Change Log Summarizer Agent...")
             state = await summarizer.process(state)
             change_summary = state.change_summary or {}
-            print(f"   ✅ Analysis complete ({change_summary.get('analysis_method', 'unknown')})")
-            print(f"   📊 Change: {change_summary.get('change_type', 'unknown')}, "
+            print(f"    Analysis complete ({change_summary.get('analysis_method', 'unknown')})")
+            print(f"    Change: {change_summary.get('change_type', 'unknown')}, "
                   f"Size: {change_summary.get('change_size', 'unknown')}, "
                   f"Confidence: {change_summary.get('llm_confidence', 0):.2f}")
             
             # Agent 2: Policy Validator
-            print("\n✅ Policy Validator Agent...")
+            print("\n Policy Validator Agent...")
             state = await validator.process(state)
             policy_validation = state.policy_validation or {}
-            print(f"   ✅ Validation complete ({policy_validation.get('analysis_method', 'unknown')})")
-            print(f"   📊 Status: {policy_validation.get('compliance_status', 'unknown')}, "
+            print(f"    Validation complete ({policy_validation.get('analysis_method', 'unknown')})")
+            print(f"    Status: {policy_validation.get('compliance_status', 'unknown')}, "
                   f"Risk: {policy_validation.get('risk_level', 'unknown')}, "
                   f"Violations: {len(policy_validation.get('violations', []))}")
             
             # Agent 3: Release Decision
-            print("\n🎯 Release Decision Agent...")
+            print("\n Release Decision Agent...")
             state = await decision_agent.process(state)
             final_decision = state.final_decision or {}
-            print(f"   ✅ Decision complete ({final_decision.get('analysis_method', 'unknown')})")
-            print(f"   📊 Decision: {final_decision.get('decision', 'unknown')}, "
+            print(f"    Decision complete ({final_decision.get('analysis_method', 'unknown')})")
+            print(f"    Decision: {final_decision.get('decision', 'unknown')}, "
                   f"Confidence: {final_decision.get('confidence', 0):.2f}")
             
             # Final summary
-            print(f"\n📋 Final Decision Summary:")
-            print(f"   🎯 Decision: {final_decision.get('decision', 'UNKNOWN').upper()}")
+            print(f"\n Final Decision Summary:")
+            print(f"    Decision: {final_decision.get('decision', 'UNKNOWN').upper()}")
             risk_assessment = final_decision.get('risk_assessment', {})
-            print(f"   🎯 Overall Risk: {risk_assessment.get('overall_risk', 'unknown')}")
-            print(f"   🎯 Conditions: {len(final_decision.get('conditions', []))} required")
-            print(f"   🎯 Confidence: {state.confidence:.2f}")
+            print(f"    Overall Risk: {risk_assessment.get('overall_risk', 'unknown')}")
+            print(f"    Conditions: {len(final_decision.get('conditions', []))} required")
+            print(f"    Confidence: {state.confidence:.2f}")
             
             conditions = final_decision.get('conditions', [])
             if conditions:
-                print(f"   📝 Conditions:")
+                print(f"    Conditions:")
                 for condition in conditions:
                     print(f"      - {condition.get('condition', 'Unknown condition')}")
         
         except Exception as e:
-            print(f"   ❌ Error processing scenario: {e}")
+            print(f"    Error processing scenario: {e}")
     
-    print(f"\n✅ LLM-Enhanced Demo Complete")
-    print(f"🔧 All agents successfully demonstrated LLM-first analysis with fallback capabilities")
+    print(f"\n LLM-Enhanced Demo Complete")
+    print(f" All agents successfully demonstrated LLM-first analysis with fallback capabilities")
 
 if __name__ == "__main__":
     asyncio.run(run_llm_enhanced_demo())
