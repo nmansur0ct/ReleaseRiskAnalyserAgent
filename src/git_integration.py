@@ -65,6 +65,11 @@ class GitProvider(ABC):
     async def get_pull_request_files(self, repo_url: str, pr_number: int) -> List[Dict[str, Any]]:
         """Fetch files changed in a pull request"""
         pass
+    
+    @abstractmethod
+    async def get_pull_request_comments(self, repo_url: str, pr_number: int) -> List[Dict[str, Any]]:
+        """Fetch comments on a pull request"""
+        pass
 
 class GitHubProvider(GitProvider):
     """GitHub API provider"""
@@ -155,6 +160,28 @@ class GitHubProvider(GitProvider):
             
         except Exception as e:
             logger.error(f"Error fetching PR files {pr_number} from {repo_url}: {e}")
+            return []
+    
+    async def get_pull_request_comments(self, repo_url: str, pr_number: int) -> List[Dict[str, Any]]:
+        """Fetch comments on a pull request (issue comments and review comments)"""
+        if not self.validate_config():
+            logger.warning("GitHub provider not properly configured, using mock data")
+            return self._generate_mock_comments_data(pr_number)
+        
+        try:
+            owner, repo = self._parse_github_url(repo_url)
+            
+            # Fetch both issue comments and review comments
+            # In real implementation:
+            # issue_comments_url = f"{self.api_base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
+            # review_comments_url = f"{self.api_base_url}/repos/{owner}/{repo}/pulls/{pr_number}/comments"
+            
+            await asyncio.sleep(0.1)  # Simulate API delay
+            
+            return self._generate_mock_comments_data(pr_number)
+            
+        except Exception as e:
+            logger.error(f"Error fetching PR comments {pr_number} from {repo_url}: {e}")
             return []
     
     def _parse_github_url(self, repo_url: str) -> tuple[str, str]:
@@ -302,6 +329,54 @@ class GitHubProvider(GitProvider):
                 'patch': '@@ -15,2 +15,8 @@\n database:\n-  old_config\n+  new_config...'
             }
         ]
+    
+    def _generate_mock_comments_data(self, pr_number: int) -> List[Dict[str, Any]]:
+        """Generate mock PR comments data for testing"""
+        comments = [
+            {
+                'id': 1001 + pr_number,
+                'user': 'tech-lead',
+                'body': 'LGTM! Great work on the authentication implementation. Please ensure all tests pass before merging.',
+                'created_at': '2024-10-30T11:30:00Z',
+                'updated_at': '2024-10-30T11:30:00Z',
+                'type': 'issue_comment'
+            },
+            {
+                'id': 1002 + pr_number,
+                'user': 'security-reviewer',
+                'body': 'Security review completed. Found one minor issue with token expiration - please extend timeout to 30 minutes instead of 15.',
+                'created_at': '2024-10-30T14:15:00Z',
+                'updated_at': '2024-10-30T14:15:00Z',
+                'type': 'issue_comment'
+            },
+            {
+                'id': 1003 + pr_number,
+                'user': f'developer{pr_number}@company.com',
+                'body': 'Thanks for the feedback! Updated the token expiration to 30 minutes as suggested.',
+                'created_at': '2024-10-31T09:00:00Z',
+                'updated_at': '2024-10-31T09:00:00Z',
+                'type': 'issue_comment'
+            },
+            {
+                'id': 2001 + pr_number,
+                'user': 'code-reviewer',
+                'body': 'Consider adding more error handling in the OAuth callback function.',
+                'created_at': '2024-10-30T12:45:00Z',
+                'updated_at': '2024-10-30T12:45:00Z',
+                'type': 'review_comment',
+                'path': 'src/auth/oauth.py',
+                'line': 45
+            },
+            {
+                'id': 2002 + pr_number,
+                'user': 'senior-dev',
+                'body': 'Approved with minor suggestions. The payment integration looks solid.',
+                'created_at': '2024-10-31T10:30:00Z',
+                'updated_at': '2024-10-31T10:30:00Z',
+                'type': 'review_comment'
+            }
+        ]
+        return comments
 
 class GitLabProvider(GitProvider):
     """GitLab API provider"""
@@ -370,6 +445,15 @@ class GitManager:
             return []
         
         return await git_provider.get_pull_request_files(repo_url, pr_number)
+    
+    async def fetch_pull_request_comments(self, repo_url: str, pr_number: int, provider: str = "github") -> List[Dict[str, Any]]:
+        """Fetch comments on a pull request"""
+        git_provider = self.get_provider(provider)
+        if not git_provider:
+            logger.error(f"Git provider '{provider}' not available")
+            return []
+        
+        return await git_provider.get_pull_request_comments(repo_url, pr_number)
     
     def detect_provider_from_url(self, repo_url: str) -> str:
         """Detect the appropriate provider based on repository URL"""

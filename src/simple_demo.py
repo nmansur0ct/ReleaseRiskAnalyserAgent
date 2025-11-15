@@ -83,12 +83,25 @@ async def fetch_repository_prs(repo_url, pr_limit=5):
             print(f"Found {len(verified_prs)} verified pull requests from {repo_name} repository")
             print(f"Verification: All PRs have valid PR numbers and URLs from Git provider")
             
+            # Fetch comments for each PR
+            print(f"Fetching comments for {len(verified_prs)} PRs...")
+            for pr in verified_prs:
+                try:
+                    comments = await git_provider.get_pull_request_comments(repo_url, pr['number'])
+                    pr['comments'] = comments
+                    pr['comment_count'] = len(comments)
+                except Exception as e:
+                    print(f"Warning: Could not fetch comments for PR #{pr['number']}: {e}")
+                    pr['comments'] = []
+                    pr['comment_count'] = 0
+            
             # Display PRs for verification
             for i, pr in enumerate(verified_prs[:3], 1):  # Show first 3 PRs
                 print(f"\n  {i}. PR #{pr['number']}: {pr['title']}")
                 print(f"      Author: {pr['author']}")
                 print(f"      Changes: +{pr['additions']} -{pr['deletions']}")
                 print(f"      Files: {len(pr.get('changed_files', []))}")
+                print(f"      Comments: {pr.get('comment_count', 0)}")
                 print(f"      URL: {pr.get('url')}")
             
             return verified_prs
@@ -212,13 +225,33 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
     pr_additions = pr_data.get('additions', 0)
     pr_deletions = pr_data.get('deletions', 0)
     pr_files = pr_data.get('changed_files', [])
+    pr_comments = pr_data.get('comments', [])
+    pr_comment_count = pr_data.get('comment_count', 0)
     
     print(f"PR #{pr_number}: {pr_title}")
     print(f"Author: {pr_author}")
     print(f"Changes: +{pr_additions} -{pr_deletions} lines")
     print(f"Files Modified: {len(pr_files)}")
+    print(f"Comments: {pr_comment_count}")
     print(f"Analysis Progress: {pr_index}/{total_prs}")
     print()
+    
+    # Display PR comments if available
+    if pr_comments:
+        print(f"\nPR COMMENTS ({pr_comment_count} total):")
+        print("-" * 60)
+        for idx, comment in enumerate(pr_comments[:5], 1):  # Show first 5 comments
+            comment_user = comment.get('user', 'Unknown')
+            comment_body = comment.get('body', '')
+            comment_type = comment.get('type', 'comment')
+            # Truncate long comments
+            if len(comment_body) > 100:
+                comment_body = comment_body[:100] + "..."
+            print(f"  {idx}. [{comment_type}] {comment_user}:")
+            print(f"     {comment_body}")
+        if pr_comment_count > 5:
+            print(f"  ... and {pr_comment_count - 5} more comments")
+        print()
     
     # Perform detailed plugin analysis for this specific PR
     print(f"EXECUTING 5-PLUGIN LLM ANALYSIS...")
@@ -294,12 +327,16 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
     print(f"Confidence: {pr_verdict['confidence']}%")
     print(f"Risk Level: {pr_verdict['risk_level']}")
     print(f"Overall Score: {pr_verdict['score']}/100")
+    if pr_comment_count > 0:
+        print(f"Review Comments: {pr_comment_count} (see details above)")
     print()
     
     return {
         'pr_data': pr_data,
         'plugin_results': plugin_results,
-        'verdict': pr_verdict
+        'verdict': pr_verdict,
+        'comments': pr_comments,
+        'comment_count': pr_comment_count
     }
 
 async def generate_pr_verdict_with_llm(pr_data: Dict[str, Any], plugin_results: Dict[str, Any], repo_url: str):
@@ -319,7 +356,20 @@ async def generate_pr_verdict_with_llm(pr_data: Dict[str, Any], plugin_results: 
         pr_additions = pr_data.get('additions', 0)
         pr_deletions = pr_data.get('deletions', 0)
         
-        # Prepare analysis context for LLM
+        # Prepare analysis context for LLM including comments
+        pr_comments = pr_data.get('comments', [])
+        comment_summary = ""
+        if pr_comments:
+            comment_summary = f"\n        - PR Comments: {len(pr_comments)} comments from reviewers"
+            # Include key comments in analysis
+            key_comments = []
+            for comment in pr_comments[:3]:  # First 3 comments
+                user = comment.get('user', 'Unknown')
+                body = comment.get('body', '')[:150]  # First 150 chars
+                key_comments.append(f"  * {user}: {body}")
+            if key_comments:
+                comment_summary += "\n        Key Review Comments:\n" + "\n".join(key_comments)
+        
         analysis_summary = f"""
         Pull Request Analysis Summary:
         - PR #{pr_number}: {pr_title}
@@ -327,7 +377,7 @@ async def generate_pr_verdict_with_llm(pr_data: Dict[str, Any], plugin_results: 
         - Security Analysis: {plugin_results.get('security', {}).get('security_issues', 0)} issues found
         - Compliance Status: All standards passed
         - Impact Score: {plugin_results.get('change_log', {}).get('impact_score', 5.0)}/10
-        - Risk Assessment: Comprehensive evaluation completed
+        - Risk Assessment: Comprehensive evaluation completed{comment_summary}
         """
         
         prompt = f"""
@@ -1483,9 +1533,9 @@ async def generate_comprehensive_summary_report(all_results: list, repo_urls: li
     print_and_capture(f"Average Confidence: {overall_avg_confidence:.1f}%")
     print_and_capture(f"Average Quality Score: {overall_avg_score:.1f}/100")
     
-    # Per-repository breakdown
+    # Per-repository breakdown with PR details including comments
     print_and_capture(f"\n\n{'='*80}")
-    print_and_capture(" PER-REPOSITORY BREAKDOWN")
+    print_and_capture(" PER-REPOSITORY BREAKDOWN WITH PR DETAILS")
     print_and_capture(f"{'='*80}")
     
     for idx, result in enumerate(all_results, 1):
@@ -1498,6 +1548,36 @@ async def generate_comprehensive_summary_report(all_results: list, repo_urls: li
             print_and_capture(f"    Approved: {metrics['total_approved']}, Conditional: {metrics['total_conditional']}, Rejected: {metrics['total_rejected']}")
             print_and_capture(f"    Confidence: {metrics['avg_confidence']:.1f}%, Score: {metrics['avg_score']:.1f}/100")
             print_and_capture(f"    Risk: Low:{metrics['risk_distribution']['low']} Med:{metrics['risk_distribution']['medium']} High:{metrics['risk_distribution']['high']}")
+            
+            # Add PR details with comments
+            if 'pr_results' in result and result['pr_results']:
+                print_and_capture(f"\n    PR DETAILS:")
+                for pr_idx, pr_result in enumerate(result['pr_results'], 1):
+                    pr_data = pr_result['pr_data']
+                    pr_verdict = pr_result['verdict']
+                    pr_comments = pr_result.get('comments', [])
+                    
+                    print_and_capture(f"\n      PR #{pr_data.get('number')}: {pr_data.get('title')}")
+                    print_and_capture(f"        Author: {pr_data.get('author')}")
+                    print_and_capture(f"        Changes: +{pr_data.get('additions', 0)} -{pr_data.get('deletions', 0)} lines")
+                    print_and_capture(f"        Files: {len(pr_data.get('changed_files', []))}")
+                    print_and_capture(f"        Verdict: {pr_verdict['recommendation']} (Risk: {pr_verdict['risk_level']}, Score: {pr_verdict['score']}/100)")
+                    print_and_capture(f"        Comments: {len(pr_comments)}")
+                    
+                    # Include PR comments in report
+                    if pr_comments:
+                        print_and_capture(f"\n        REVIEW COMMENTS:")
+                        for comment_idx, comment in enumerate(pr_comments[:5], 1):  # Show first 5
+                            comment_user = comment.get('user', 'Unknown')
+                            comment_body = comment.get('body', '')
+                            comment_type = comment.get('type', 'comment')
+                            # Truncate long comments for report
+                            if len(comment_body) > 120:
+                                comment_body = comment_body[:120] + \"...\"
+                            print_and_capture(f"          {comment_idx}. [{comment_type}] {comment_user}:")
+                            print_and_capture(f"             {comment_body}")
+                        if len(pr_comments) > 5:
+                            print_and_capture(f"          ... and {len(pr_comments) - 5} more comments")
         else:
             print_and_capture(f"    Status: No PRs found")
     
