@@ -1,8 +1,0 @@
-{
-  "title": "Catalog DB migration for SKU indexing",
-  "body": "- Adds SKU index and changes varchar length.\n- No public API change; updates ORM model.\n- (Docs pending)",
-  "files": [
-    "services/catalog/models.py",
-    "migrations/2025_10_29_add_sku_index.sql"
-  ]
-}

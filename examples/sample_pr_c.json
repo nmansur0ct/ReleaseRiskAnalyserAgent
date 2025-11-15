@@ -1,7 +1,0 @@
-{
-  "title": "Update keys for staging",
-  "body": "- Temporary secret for partner testing: -----BEGIN PRIVATE KEY-----\n- Revert before prod cut.",
-  "files": [
-    "config/staging.env"
-  ]
-}

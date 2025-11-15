@@ -1,8 +1,0 @@
-{
-  "title": "Experiment: feature flag driver for A/B infra",
-  "body": "- Introduces experimental driver for flag rollout.\n- Not on the approved module list yet.",
-  "files": [
-    "experimental/feature_flag_driver.py",
-    "services/flags/router.py"
-  ]
-}

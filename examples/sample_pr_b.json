@@ -1,8 +1,0 @@
-{
-  "title": "Add payment retries in gateway",
-  "body": "- Introduce idempotency keys for retries.\n- Touches gateway router and card processing path.\n- Will add tests in follow-up PR.",
-  "files": [
-    "gateway/router.ts",
-    "payments/processor.ts"
-  ]
-}
