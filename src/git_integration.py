@@ -65,6 +65,11 @@ class GitProvider(ABC):
     async def get_pull_request_files(self, repo_url: str, pr_number: int) -> List[Dict[str, Any]]:
         """Fetch files changed in a pull request"""
         pass
+    
+    @abstractmethod
+    async def get_pull_request_comments(self, repo_url: str, pr_number: int) -> List[Dict[str, Any]]:
+        """Fetch comments on a pull request"""
+        pass
 
 class GitHubProvider(GitProvider):
     """GitHub API provider"""
@@ -147,9 +152,29 @@ class GitHubProvider(GitProvider):
             owner, repo = self._parse_github_url(repo_url)
             url = f"{self.api_base_url}/repos/{owner}/{repo}/pulls/{pr_number}/files"
             
-            # In a real implementation, you would make the actual API call
-            # For now, return mock data
-            await asyncio.sleep(0.1)  # Simulate API delay
+            if self.session:
+                try:
+                    response = self.session.get(url)
+                    if response.status_code == 200:
+                        files = response.json()
+                        result = []
+                        for file in files:
+                            result.append({
+                                'filename': file.get('filename'),
+                                'status': file.get('status'),
+                                'additions': file.get('additions', 0),
+                                'deletions': file.get('deletions', 0),
+                                'changes': file.get('changes', 0),
+                                'patch': file.get('patch', '')
+                            })
+                        logger.info(f"Fetched {len(result)} real files for PR #{pr_number}")
+                        return result
+                    else:
+                        logger.warning(f"Failed to fetch files: {response.status_code}, using mock data")
+                        return self._generate_mock_files_data()
+                except Exception as api_error:
+                    logger.error(f"API call failed: {api_error}, using mock data")
+                    return self._generate_mock_files_data()
             
             return self._generate_mock_files_data()
             
@@ -157,11 +182,88 @@ class GitHubProvider(GitProvider):
             logger.error(f"Error fetching PR files {pr_number} from {repo_url}: {e}")
             return []
     
+    async def get_pull_request_comments(self, repo_url: str, pr_number: int) -> List[Dict[str, Any]]:
+        """Fetch comments on a pull request (issue comments and review comments)"""
+        if not self.validate_config():
+            logger.warning("GitHub provider not properly configured, using mock data")
+            return self._generate_mock_comments_data(pr_number)
+        
+        try:
+            owner, repo = self._parse_github_url(repo_url)
+            
+            # Fetch both issue comments and review comments from GitHub API
+            all_comments = []
+            
+            if self.session:
+                try:
+                    # Fetch issue comments (general PR comments)
+                    issue_comments_url = f"{self.api_base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
+                    issue_response = self.session.get(issue_comments_url)
+                    
+                    if issue_response.status_code == 200:
+                        issue_comments = issue_response.json()
+                        for comment in issue_comments:
+                            all_comments.append({
+                                'id': comment.get('id'),
+                                'user': comment.get('user', {}).get('login', 'Unknown'),
+                                'body': comment.get('body', ''),
+                                'created_at': comment.get('created_at'),
+                                'updated_at': comment.get('updated_at'),
+                                'type': 'issue_comment',
+                                'url': comment.get('html_url')
+                            })
+                    else:
+                        logger.warning(f"Failed to fetch issue comments: {issue_response.status_code}")
+                    
+                    # Fetch review comments (inline code review comments)
+                    review_comments_url = f"{self.api_base_url}/repos/{owner}/{repo}/pulls/{pr_number}/comments"
+                    review_response = self.session.get(review_comments_url)
+                    
+                    if review_response.status_code == 200:
+                        review_comments = review_response.json()
+                        for comment in review_comments:
+                            all_comments.append({
+                                'id': comment.get('id'),
+                                'user': comment.get('user', {}).get('login', 'Unknown'),
+                                'body': comment.get('body', ''),
+                                'created_at': comment.get('created_at'),
+                                'updated_at': comment.get('updated_at'),
+                                'type': 'review_comment',
+                                'path': comment.get('path'),
+                                'line': comment.get('line'),
+                                'url': comment.get('html_url')
+                            })
+                    else:
+                        logger.warning(f"Failed to fetch review comments: {review_response.status_code}")
+                    
+                    # Sort comments by creation date
+                    all_comments.sort(key=lambda x: x.get('created_at', ''))
+                    
+                    logger.info(f"Fetched {len(all_comments)} real comments for PR #{pr_number}")
+                    return all_comments
+                    
+                except Exception as api_error:
+                    logger.error(f"API call failed: {api_error}, falling back to mock data")
+                    return self._generate_mock_comments_data(pr_number)
+            
+            # Fallback to mock data if session not available
+            logger.warning("No session available, using mock data")
+            return self._generate_mock_comments_data(pr_number)
+            
+        except Exception as e:
+            logger.error(f"Error fetching PR comments {pr_number} from {repo_url}: {e}")
+            return []
+    
     def _parse_github_url(self, repo_url: str) -> tuple[str, str]:
         """Parse GitHub repository URL to extract owner and repo name"""
         # Handle various GitHub URL formats
         if repo_url.startswith('https://github.com/'):
             path = repo_url.replace('https://github.com/', '').rstrip('/')
+            # Remove branch/tree path if present (e.g., /tree/main or /tree/v1)
+            if '/tree/' in path:
+                path = path.split('/tree/')[0]
+            elif '/pull/' in path:
+                path = path.split('/pull/')[0]
         elif repo_url.startswith('git@github.com:'):
             path = repo_url.replace('git@github.com:', '').replace('.git', '').rstrip('/')
         else:
@@ -302,6 +404,54 @@ class GitHubProvider(GitProvider):
                 'patch': '@@ -15,2 +15,8 @@\n database:\n-  old_config\n+  new_config...'
             }
         ]
+    
+    def _generate_mock_comments_data(self, pr_number: int) -> List[Dict[str, Any]]:
+        """Generate mock PR comments data for testing"""
+        comments = [
+            {
+                'id': 1001 + pr_number,
+                'user': 'tech-lead',
+                'body': 'LGTM! Great work on the authentication implementation. Please ensure all tests pass before merging.',
+                'created_at': '2024-10-30T11:30:00Z',
+                'updated_at': '2024-10-30T11:30:00Z',
+                'type': 'issue_comment'
+            },
+            {
+                'id': 1002 + pr_number,
+                'user': 'security-reviewer',
+                'body': 'Security review completed. Found one minor issue with token expiration - please extend timeout to 30 minutes instead of 15.',
+                'created_at': '2024-10-30T14:15:00Z',
+                'updated_at': '2024-10-30T14:15:00Z',
+                'type': 'issue_comment'
+            },
+            {
+                'id': 1003 + pr_number,
+                'user': f'developer{pr_number}@company.com',
+                'body': 'Thanks for the feedback! Updated the token expiration to 30 minutes as suggested.',
+                'created_at': '2024-10-31T09:00:00Z',
+                'updated_at': '2024-10-31T09:00:00Z',
+                'type': 'issue_comment'
+            },
+            {
+                'id': 2001 + pr_number,
+                'user': 'code-reviewer',
+                'body': 'Consider adding more error handling in the OAuth callback function.',
+                'created_at': '2024-10-30T12:45:00Z',
+                'updated_at': '2024-10-30T12:45:00Z',
+                'type': 'review_comment',
+                'path': 'src/auth/oauth.py',
+                'line': 45
+            },
+            {
+                'id': 2002 + pr_number,
+                'user': 'senior-dev',
+                'body': 'Approved with minor suggestions. The payment integration looks solid.',
+                'created_at': '2024-10-31T10:30:00Z',
+                'updated_at': '2024-10-31T10:30:00Z',
+                'type': 'review_comment'
+            }
+        ]
+        return comments
 
 class GitLabProvider(GitProvider):
     """GitLab API provider"""
@@ -370,6 +520,15 @@ class GitManager:
             return []
         
         return await git_provider.get_pull_request_files(repo_url, pr_number)
+    
+    async def fetch_pull_request_comments(self, repo_url: str, pr_number: int, provider: str = "github") -> List[Dict[str, Any]]:
+        """Fetch comments on a pull request"""
+        git_provider = self.get_provider(provider)
+        if not git_provider:
+            logger.error(f"Git provider '{provider}' not available")
+            return []
+        
+        return await git_provider.get_pull_request_comments(repo_url, pr_number)
     
     def detect_provider_from_url(self, repo_url: str) -> str:
         """Detect the appropriate provider based on repository URL"""
