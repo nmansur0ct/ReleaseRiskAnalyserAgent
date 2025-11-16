@@ -17,57 +17,81 @@ The Risk Agent Analyzer is an enterprise-grade CI/CD governance platform that pr
 ## 1. High-Level System Architecture
 
 ```mermaid
-architecture-beta
-    group frontend(cloud)[Frontend Layer]
-    group orchestration(server)[Orchestration Layer]
-    group agents(database)[Agent Layer]
-    group storage(disk)[Data Layer]
-    group external(internet)[External Services]
-
-    service api_gateway(server)[API Gateway] in frontend
-    service web_ui(server)[Web Interface] in frontend
+flowchart TD
+    subgraph "Frontend Layer"
+        WUI[Web Interface]
+        API[API Gateway]
+    end
     
-    service workflow_engine(server)[Workflow Engine] in orchestration
-    service state_manager(database)[State Manager] in orchestration
-    service plugin_registry(server)[Plugin Registry] in orchestration
+    subgraph "Orchestration Layer"
+        WFE[Workflow Engine]
+        SM[State Manager]
+        PR[Plugin Registry]
+    end
     
-    service input_validator(server)[Input Validator] in agents
-    service change_analyzer(server)[Change Analyzer] in agents
-    service policy_evaluator(server)[Policy Evaluator] in agents
-    service risk_assessor(server)[Risk Assessor] in agents
-    service decision_engine(server)[Decision Engine] in agents
-    service quality_assurance(server)[Quality Assurance] in agents
-    service code_reviewer(server)[Code Reviewer] in agents
+    subgraph "Agent Layer"
+        IV[Input Validator]
+        CA[Change Analyzer]
+        PE[Policy Evaluator]
+        RA[Risk Assessor]
+        DE[Decision Engine]
+        QA[Quality Assurance]
+        CR[Code Reviewer]
+    end
     
-    service config_store(database)[Configuration] in storage
-    service analysis_cache(database)[Analysis Cache] in storage
-    service audit_log(database)[Audit Log] in storage
+    subgraph "Data Layer"
+        CS[(Configuration Store)]
+        AC[(Analysis Cache)]
+        AL[(Audit Log)]
+    end
     
-    service git_provider(internet)[Git Provider] in external
-    service llm_service(internet)[LLM Service] in external
-    service notification(internet)[Notification] in external
-
-    api_gateway:B --> T:workflow_engine
-    web_ui:B --> T:api_gateway
+    subgraph "External Services"
+        GP{{Git Provider}}
+        LLM{{LLM Service}}
+        NS{{Notification Service}}
+    end
     
-    workflow_engine:B --> T:state_manager
-    workflow_engine:L --> R:plugin_registry
+    %% Frontend connections
+    WUI --> API
+    API --> WFE
     
-    state_manager:B --> T:input_validator
-    input_validator:R --> L:change_analyzer
-    change_analyzer:R --> L:policy_evaluator
-    policy_evaluator:B --> T:risk_assessor
-    risk_assessor:R --> L:decision_engine
-    decision_engine:R --> L:quality_assurance
-    quality_assurance:B --> T:code_reviewer
+    %% Orchestration connections
+    WFE --> SM
+    WFE --> PR
     
-    workflow_engine:B --> T:config_store
-    change_analyzer:B --> T:analysis_cache
-    decision_engine:B --> T:audit_log
+    %% Agent workflow connections
+    SM --> IV
+    IV --> CA
+    CA --> PE
+    PE --> RA
+    RA --> DE
+    DE --> QA
+    QA --> CR
     
-    change_analyzer:R --> L:git_provider{group}
-    policy_evaluator:T --> B:llm_service{group}
-    decision_engine:R --> L:notification{group}
+    %% Data layer connections
+    WFE --> CS
+    CA --> AC
+    DE --> AL
+    
+    %% External service connections
+    CA --> GP
+    PE --> LLM
+    RA --> LLM
+    DE --> NS
+    CR --> LLM
+    
+    %% Styling
+    classDef frontend fill:#e3f2fd
+    classDef orchestration fill:#fff3e0
+    classDef agent fill:#e8f5e8
+    classDef data fill:#fce4ec
+    classDef external fill:#f3e5f5
+    
+    class WUI,API frontend
+    class WFE,SM,PR orchestration
+    class IV,CA,PE,RA,DE,QA,CR agent
+    class CS,AC,AL data
+    class GP,LLM,NS external
 ```
 
 ---
