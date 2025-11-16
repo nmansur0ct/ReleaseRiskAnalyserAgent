@@ -10,13 +10,19 @@ from abc import ABC, abstractmethod
 import logging
 import functools
 
+from typing import Protocol
+
+class EnvConfigProtocol(Protocol):
+    def get_llm_config(self) -> Dict[str, Any]:
+        ...
+
 try:
     from environment_config import get_env_config
 except ImportError:
     # Fallback for standalone execution
     import os
     class MockEnvConfig:
-        def get_llm_config(self):
+        def get_llm_config(self) -> Dict[str, Any]:
             return {
                 'provider': os.getenv('LLM_PROVIDER', 'mock'),
                 'walmart_llm_gateway_url': os.getenv('WALMART_LLM_GATEWAY_URL', 'https://wmtllmgateway.stage.walmart.com/wmtllmgateway'),
@@ -24,7 +30,7 @@ except ImportError:
                 'openai_api_key': os.getenv('OPENAI_API_KEY'),
                 'anthropic_api_key': os.getenv('ANTHROPIC_API_KEY')
             }
-    def get_env_config():
+    def get_env_config() -> EnvConfigProtocol:
         return MockEnvConfig()
 
 logger = logging.getLogger(__name__)
@@ -66,7 +72,11 @@ class OpenAIProvider(LLMProvider):
         if not self.validate_config():
             raise ValueError("OpenAI provider not properly configured")
         
+        if self.client is None:
+            raise ValueError("OpenAI client is not initialized. Please install the openai package.")
+        
         try:
+
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None,
@@ -78,7 +88,9 @@ class OpenAIProvider(LLMProvider):
                     temperature=kwargs.get('temperature', 0.7)
                 )
             )
-            return response.choices[0].message.content
+
+            content = response.choices[0].message.content
+            return content if content is not None else ""
             
         except Exception as e:
             logger.error(f"OpenAI API call failed: {e}")
@@ -105,10 +117,15 @@ class AnthropicProvider(LLMProvider):
     
     async def generate(self, prompt: str, **kwargs) -> str:
         """Generate response using Anthropic"""
+
         if not self.validate_config():
             raise ValueError("Anthropic provider not properly configured")
         
+        if self.client is None:
+            raise ValueError("Anthropic client is not initialized. Please install the anthropic package.")
+        
         try:
+
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None,
@@ -124,7 +141,17 @@ class AnthropicProvider(LLMProvider):
                     ],
                 )
             )
-            return response.content[0].text
+
+            # Extract text from TextBlock objects only
+            text_content = ""
+            for content_block in response.content:
+                # Check if it's a TextBlock with text attribute
+                if hasattr(content_block, 'text') and hasattr(content_block, 'type') and content_block.type == 'text':
+                    text_content += content_block.text
+                # For other block types, check if they have a string representation or specific text fields
+                elif hasattr(content_block, 'text') and not hasattr(content_block, 'type'):
+                    text_content += content_block.text
+            return text_content
             
         except Exception as e:
             logger.error(f"Anthropic API call failed: {e}")
@@ -155,9 +182,13 @@ class WalmartLLMGatewayProvider(LLMProvider):
         return bool(self.gateway_url and self.gateway_key and self.client)
     
     async def generate(self, prompt: str, **kwargs) -> str:
-        """Generate response using Walmart LLM Gateway"""
+
+        """ Generate response using Walmart LLM Gateway"""
         if not self.validate_config():
             raise ValueError("Walmart LLM Gateway provider not properly configured")
+        
+        if self.client is None:
+            raise ValueError("Walmart LLM Gateway client is not initialized. Please install the requests package.")
         
         try:
             payload = {
