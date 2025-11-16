@@ -128,15 +128,18 @@ async def execute_code_review_agents(pr_data: Dict[str, Any], session_id: str) -
         print(f"  Code review execution failed: {e}")
         return {'error': str(e), 'agent_results': {}, 'summary': {}}
 
-async def fetch_repository_prs(repo_url):
+async def fetch_repository_prs(repo_url, pr_state="open", pr_limit=10, include_comments=True):
     """ 
-    Fetch ONLY actual PRs from the specified repository - NO mock or simulated data
+    Fetch actual PRs from the specified repository with configurable state and limit
     Returns empty list if no real PRs found
     """
     print("\nGit Integration - PR Fetching")
     print("=" * 60)
     
     print(f"Analyzing repository: {repo_url}")
+    print(f"PR state filter: {pr_state}")
+    print(f"PR limit: {pr_limit}")
+    print(f"Include comments: {include_comments}")
     
     try:
         from git_integration import get_git_manager
@@ -150,11 +153,6 @@ async def fetch_repository_prs(repo_url):
         env_config = get_env_config()
         git_config = env_config.get_git_config()
         
-        pr_limit = git_config.get('pr_limit_per_repo', 5)
-        pr_state = git_config.get('pr_state', 'open')
-        
-        print(f"PR fetch limit: {pr_limit}")
-        print(f"PR state: {pr_state}")
         print(f"Data source: REAL PULL REQUESTS ONLY - No simulated or mock data")
 
         if not git_config.get('access_token'):
@@ -168,34 +166,40 @@ async def fetch_repository_prs(repo_url):
             print(f"Token configured: {access_token[:20]}...")
         
         try:
-            # Fetch ONLY REAL PRs from the repository - NEVER generate mock data
+            # Fetch REAL PRs from the repository with specified state
             git_provider = git_manager.get_provider("github")
             if not git_provider:
                 print("GitHub provider not available")
                 return []
             
-            prs = await git_provider.get_pull_requests(repo_url)
+            prs = await git_provider.get_pull_requests(repo_url, state=pr_state, limit=pr_limit)
             
             # CRITICAL: Verify these are real PRs with actual PR numbers and URLs
             if not prs:
                 return []
             
-            # Filter out any invalid/mock entries - must have number and url
+            # Filter out any invalid entries - must have number and url
             verified_prs = [pr for pr in prs if pr.get('number') and pr.get('url')]
             
             repo_name = repo_url.split('/')[-1].replace('.git', '')
             print(f"Found {len(verified_prs)} verified pull requests from {repo_name} repository")
             print(f"Verification: All PRs have valid PR numbers and URLs from Git provider")
             
-            # Fetch comments for each PR
-            print(f"Fetching comments for {len(verified_prs)} PRs...")
-            for pr in verified_prs:
-                try:
-                    comments = await git_provider.get_pull_request_comments(repo_url, pr['number'])
-                    pr['comments'] = comments
-                    pr['comment_count'] = len(comments)
-                except Exception as e:
-                    print(f"Warning: Could not fetch comments for PR #{pr['number']}: {e}")
+            # Fetch comments for each PR if requested
+            if include_comments:
+                print(f"Fetching comments for {len(verified_prs)} PRs...")
+                for pr in verified_prs:
+                    try:
+                        comments = await git_provider.get_pull_request_comments(repo_url, pr['number'])
+                        pr['comments'] = comments
+                        pr['comment_count'] = len(comments)
+                    except Exception as e:
+                        print(f"Warning: Could not fetch comments for PR #{pr['number']}: {e}")
+                        pr['comments'] = []
+                        pr['comment_count'] = 0
+            else:
+                # Set empty comments if not fetching
+                for pr in verified_prs:
                     pr['comments'] = []
                     pr['comment_count'] = 0
             
@@ -896,12 +900,13 @@ async def generate_comprehensive_summary_report(all_results: list, repo_urls: Op
     except IOError as e:
         print(f"\nError saving report: {e}")
 
-def print_framework_header(repo_urls, pr_limit, output_dir):
+def print_framework_header(repo_urls, pr_limit, output_dir, pr_state="open"):
     """Prints the header for the analysis framework"""
     print("="*80)
     print(" MULTI-REPOSITORY PR ANALYSIS FRAMEWORK")
     print("="*80)
     print(f" Total Repositories to Analyze: {len(repo_urls)}")
+    print(f" PR State Filter: {pr_state.upper()}")
     print(f" PR Limit per Repository: {pr_limit}")
     print(f" Reports will be saved to: {output_dir}/")
     print("="*80)
@@ -934,16 +939,43 @@ Examples:
         help="Directory to save analysis reports"
     )
     
+    parser.add_argument(
+        "--pr-state",
+        type=str,
+        choices=["open", "closed", "all"],
+        default="open",
+        help="State of pull requests to analyze (open, closed, or all)"
+    )
+    
+    parser.add_argument(
+        "--pr-limit",
+        type=int,
+        default=10,
+        help="Maximum number of pull requests to analyze per repository"
+    )
+    
+    parser.add_argument(
+        "--include-comments",
+        action="store_true",
+        default=True,
+        help="Include PR comments in the analysis (default: enabled)"
+    )
+    
     args = parser.parse_args()
     
     # Ensure output directory exists
     os.makedirs(args.output_dir, exist_ok=True)
+
     
     env_config = get_env_config()
     git_config = env_config.get_git_config()
-    pr_limit = git_config.get('pr_limit_per_repo', 5)
+    
+    # Use command line arguments or fallback to config defaults
+    pr_limit = args.pr_limit if hasattr(args, 'pr_limit') else git_config.get('pr_limit_per_repo', 10)
+    pr_state = args.pr_state if hasattr(args, 'pr_state') else git_config.get('pr_state', 'open')
+    include_comments = args.include_comments if hasattr(args, 'include_comments') else True
 
-    print_framework_header(args.repo_urls, pr_limit, args.output_dir)
+    print_framework_header(args.repo_urls, pr_limit, args.output_dir, pr_state)
     
     all_repo_results = []
     
@@ -952,8 +984,9 @@ Examples:
         print(f" REPOSITORY {i}/{len(args.repo_urls)}: {repo_url.split('/')[-1]}")
         print(f"{'#'*80}\n")
         
-        # Fetch PRs for the current repository
-        git_prs = await fetch_repository_prs(repo_url)
+
+        # Fetch PRs for the current repository with specified parameters
+        git_prs = await fetch_repository_prs(repo_url, pr_state, pr_limit, include_comments)
         
         # Store results for this repository
         repo_result = {
@@ -962,8 +995,10 @@ Examples:
             'pr_results': []
         }
         
+
         if git_prs:
-            print(f"\nFOUND {len(git_prs)} REAL PRS FROM {repo_url.split('/')[-1].upper()} REPOSITORY")
+            state_display = pr_state.upper()
+            print(f"\nFOUND {len(git_prs)} {state_display} PRS FROM {repo_url.split('/')[-1].upper()} REPOSITORY")
             print(f"Analyzing each PR with comprehensive LLM evaluation...")
             
             pr_results = []
@@ -977,22 +1012,28 @@ Examples:
             
             repo_result['pr_results'] = pr_results
             await generate_overall_repository_verdict(git_prs, pr_results, repo_url)
+
         else:
-            print(f"\nNO PULL REQUESTS FOUND IN {repo_url.split('/')[-1].upper()} REPOSITORY")
-            env_config = get_env_config()
-            git_config = env_config.get_git_config()
-            pr_limit = git_config.get('pr_limit_per_repo', 5)
+            state_display = pr_state.upper()
+            print(f"\nNO {state_display} PULL REQUESTS FOUND IN {repo_url.split('/')[-1].upper()} REPOSITORY")
             print("="*60)
             print(f"Repository Analysis Summary:")
             print(f"   Repository: {repo_url}")
+            print(f"   PR State Filter: {state_display}")
             print(f"   Total PRs Found: 0")
-            print(f"   Search Period: All time")
             print(f"   Search Limit: {pr_limit} PRs")
-            print(f"   Note: NO mock or simulated PRs generated - real PRs only")
+            print(f"   Comments Included: {include_comments}")
+            print(f"   Note: Real pull requests only - no mock or simulated data")
             print()
             print(f"POSSIBLE REASONS:")
-            print(f"  - Repository has no pull requests")
-            print(f"  - All PRs are already merged/closed")
+            if pr_state == "open":
+                print(f"  - Repository has no open pull requests")
+                print(f"  - All open PRs may have been merged/closed recently")
+            elif pr_state == "closed":
+                print(f"  - Repository has no closed pull requests")
+                print(f"  - All PRs may still be open or never existed")
+            else:  # all
+                print(f"  - Repository has no pull requests at all")
             print(f"  - Access permissions may be limited")
             print(f"  - Repository is private and token access is restricted")
             print()

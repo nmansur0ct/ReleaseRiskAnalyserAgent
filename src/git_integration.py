@@ -277,16 +277,19 @@ class GitHubProvider(GitProvider):
             return []
     
 
-    async def get_pull_requests(self, repo_url: str) -> List[Dict[str, Any]]:
-        """Fetch multiple pull requests, with fallback to all open PRs if branch-specific search fails."""
+    async def get_pull_requests(self, repo_url: str, state: str = "open", limit: int = 10) -> List[Dict[str, Any]]:
+        """Fetch multiple pull requests with specified state (open, closed, all)."""
         if not self.validate_config():
             logger.error("GitHub provider not properly configured. Missing access token.")
             return []
 
         try:
+            # Use provided parameters, fallback to config if not provided
             git_config = get_env_config().get_git_config()
-            state = git_config.get('pr_state', 'open')
-            limit = git_config.get('pr_limit_per_repo', 10)
+            if state == "open" and git_config.get('pr_state'):
+                state = git_config.get('pr_state', state)
+            if limit == 10 and git_config.get('pr_limit_per_repo'):
+                limit = git_config.get('pr_limit_per_repo', limit)
 
             owner, repo, branch = self._parse_github_url(repo_url)
             url = f"{self.api_base_url}/repos/{owner}/{repo}/pulls"
@@ -508,53 +511,6 @@ class GitHubProvider(GitProvider):
             }
         ]
     
-    def _generate_mock_comments_data(self, pr_number: int) -> List[Dict[str, Any]]:
-        """Generate mock PR comments data for testing"""
-        comments = [
-            {
-                'id': 1001 + pr_number,
-                'user': 'tech-lead',
-                'body': 'LGTM! Great work on the authentication implementation. Please ensure all tests pass before merging.',
-                'created_at': '2024-10-30T11:30:00Z',
-                'updated_at': '2024-10-30T11:30:00Z',
-                'type': 'issue_comment'
-            },
-            {
-                'id': 1002 + pr_number,
-                'user': 'security-reviewer',
-                'body': 'Security review completed. Found one minor issue with token expiration - please extend timeout to 30 minutes instead of 15.',
-                'created_at': '2024-10-30T14:15:00Z',
-                'updated_at': '2024-10-30T14:15:00Z',
-                'type': 'issue_comment'
-            },
-            {
-                'id': 1003 + pr_number,
-                'user': f'developer{pr_number}@company.com',
-                'body': 'Thanks for the feedback! Updated the token expiration to 30 minutes as suggested.',
-                'created_at': '2024-10-31T09:00:00Z',
-                'updated_at': '2024-10-31T09:00:00Z',
-                'type': 'issue_comment'
-            },
-            {
-                'id': 2001 + pr_number,
-                'user': 'code-reviewer',
-                'body': 'Consider adding more error handling in the OAuth callback function.',
-                'created_at': '2024-10-30T12:45:00Z',
-                'updated_at': '2024-10-30T12:45:00Z',
-                'type': 'review_comment',
-                'path': 'src/auth/oauth.py',
-                'line': 45
-            },
-            {
-                'id': 2002 + pr_number,
-                'user': 'senior-dev',
-                'body': 'Approved with minor suggestions. The payment integration looks solid.',
-                'created_at': '2024-10-31T10:30:00Z',
-                'updated_at': '2024-10-31T10:30:00Z',
-                'type': 'review_comment'
-            }
-        ]
-        return comments
 
 class GitLabProvider(GitProvider):
     """GitLab API provider"""
@@ -665,8 +621,8 @@ async def fetch_pr_data(repo_url: str, pr_number: int) -> Optional[Dict[str, Any
     provider = manager.detect_provider_from_url(repo_url)
     return await manager.fetch_pull_request(repo_url, pr_number, provider)
 
-async def fetch_recent_prs(repo_url: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """Convenience function to fetch recent PRs"""
+async def fetch_recent_prs(repo_url: str, state: str = "open", limit: int = 10) -> List[Dict[str, Any]]:
+    """Convenience function to fetch recent PRs with specified state and limit"""
     manager = get_git_manager()
     provider = manager.detect_provider_from_url(repo_url)
-    return await manager.fetch_pull_requests(repo_url, "open", limit, provider)
+    return await manager.fetch_pull_requests(repo_url, state, limit, provider)
