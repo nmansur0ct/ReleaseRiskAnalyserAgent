@@ -6,6 +6,7 @@ Demonstrates the modular plugin system with environment configuration and Git in
 
 import asyncio
 import logging
+import time
 from datetime import datetime
 from typing import Dict, Any, Optional
 import sys
@@ -33,7 +34,7 @@ try:
     ENV_MODULES_AVAILABLE = True
 except ImportError as e:
     print(f" Required modules not available: {e}")
-    print(" Please ensure environment_config, llm_integration, and code_review_agents are installed.")
+    print(" Please ensure environment_config, llm_client, and code_review_agents are installed.")
     sys.exit(1)
 
 # Configure logging
@@ -236,12 +237,12 @@ def determine_risk_level(pr_data: Dict[str, Any]) -> str:
     else:
         return "LOW"
 
-async def execute_plugin_with_llm(plugin_name: str, pr_data: Dict[str, Any]) -> Dict[str, Any]:
+def execute_plugin_with_llm(plugin_name: str, pr_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Executes a analysis plugin using a real LLM call.
     """
-    start_time = asyncio.get_event_loop().time()
-    llm_manager = get_llm_manager()
+    start_time = time.time()
+    llm_client = LLMClient()
 
     # Base prompt providing context
     prompt = f"""
@@ -285,18 +286,19 @@ JSON fields: "notifications_sent" (array of strings), "stakeholders_notified" (i
     print(f" Plugin: {plugin_name}")
     print(f"    Executing with real LLM analysis...")
 
-    llm_result = await llm_manager.generate_with_fallback(prompt, "walmart_llm_gateway")
-    end_time = asyncio.get_event_loop().time()
+    llm_client = LLMClient()
+    llm_result = llm_client.call_llm(prompt)
+    end_time = time.time()
     total_time = end_time - start_time
 
-    if not llm_result['success']:
-        error_message = f"LLM generation failed for plugin {plugin_name}."
+    if not llm_result.get('success', False):
+        error_message = f"LLM generation failed for plugin {plugin_name}: {llm_result.get('error', 'Unknown error')}"
         print(f"    [Plugin Error] {plugin_name}: {error_message}")
         return {"error": error_message}
 
     try:
         # Clean the response to ensure it's valid JSON
-        response_text = llm_result['response'].strip()
+        response_text = llm_result.get('response', '').strip()
         # Find the start and end of the JSON object
         json_start = response_text.find('{')
         json_end = response_text.rfind('}') + 1
@@ -371,22 +373,22 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
     plugin_results = {}
     
     # Plugin 1: Change Log Summarizer
-    plugin_results['change_log'] = await execute_plugin_with_llm("change_log_summarizer", pr_data)
+    plugin_results['change_log'] = execute_plugin_with_llm("change_log_summarizer", pr_data)
     
     # Plugin 2: Security Analyzer  
-    plugin_results['security'] = await execute_plugin_with_llm("security_analyzer", pr_data)
+    plugin_results['security'] = execute_plugin_with_llm("security_analyzer", pr_data)
     
     # Plugin 3: Compliance Checker
-    plugin_results['compliance'] = await execute_plugin_with_llm("compliance_checker", pr_data)
+    plugin_results['compliance'] = execute_plugin_with_llm("compliance_checker", pr_data)
     
     # Plugin 4: Release Decision Agent
-    plugin_results['decision'] = await execute_plugin_with_llm("release_decision_agent", pr_data)
+    plugin_results['decision'] = execute_plugin_with_llm("release_decision_agent", pr_data)
     
     # Plugin 5: Notification Agent
-    plugin_results['notification'] = await execute_plugin_with_llm("notification_agent", pr_data)
+    plugin_results['notification'] = execute_plugin_with_llm("notification_agent", pr_data)
     
     # Generate LLM-powered PR verdict
-    pr_verdict = await generate_pr_verdict_with_llm(pr_data, plugin_results, repo_url)
+    pr_verdict = generate_pr_verdict_with_llm(pr_data, plugin_results, repo_url)
     
     # Display code review results
     if code_review_results and 'summary' in code_review_results:
@@ -428,7 +430,7 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
         'comment_count': pr_comment_count
     }
 
-async def generate_pr_verdict_with_llm(pr_data: Dict[str, Any], plugin_results: Dict[str, Any], repo_url: str):
+def generate_pr_verdict_with_llm(pr_data: Dict[str, Any], plugin_results: Dict[str, Any], repo_url: str):
     """ 
     Generate LLM-powered verdict for a specific PR
     """
@@ -437,7 +439,7 @@ async def generate_pr_verdict_with_llm(pr_data: Dict[str, Any], plugin_results: 
         plugin_results = {}
     
     try:
-        from llm_integration import get_llm_manager
+        from llm_client import LLMClient
         
         pr_title = pr_data.get('title', 'Unknown PR')
         pr_number = pr_data.get('number', 'N/A') 
@@ -496,15 +498,15 @@ async def generate_pr_verdict_with_llm(pr_data: Dict[str, Any], plugin_results: 
         Provide clear, actionable, evidence-based guidance.
         """
         
-        llm_manager = get_llm_manager()
+        llm_client = LLMClient()
         print(f" Generating LLM verdict for PR #{pr_number}...")
         
         try:
-            llm_result = await llm_manager.generate_with_fallback(prompt, "walmart_llm_gateway")
+            llm_result = llm_client.call_llm(prompt)
             
-            if llm_result['success']:
+            if llm_result.get('success', False):
                 # Parse LLM response
-                response_text = llm_result['response'].strip()
+                response_text = llm_result.get('response', '').strip()
                 json_start = response_text.find('{')
                 json_end = response_text.rfind('}') + 1
                 if json_start != -1 and json_end != 0:
@@ -582,7 +584,7 @@ async def generate_overall_repository_verdict(all_prs: list, pr_results: list, r
     print()
     
     # Generate LLM-powered overall verdict
-    await generate_repository_llm_summary(repo_name, all_prs, pr_results, {
+    generate_repository_llm_summary(repo_name, all_prs, pr_results, {
         'total_approved': total_approved,
         'total_conditional': total_conditional,
         'total_rejected': total_rejected,
@@ -595,12 +597,12 @@ async def generate_overall_repository_verdict(all_prs: list, pr_results: list, r
         }
     })
 
-async def generate_repository_llm_summary(repo_name: str, all_prs: list, pr_results: list, metrics: Dict[str, Any]):
+def generate_repository_llm_summary(repo_name: str, all_prs: list, pr_results: list, metrics: Dict[str, Any]):
     """
     Generate comprehensive LLM-powered repository assessment summary
     """
     try:
-        from llm_integration import get_llm_manager
+        from llm_client import LLMClient
         
         # Prepare comprehensive context for LLM
         pr_summaries = []
@@ -646,15 +648,15 @@ async def generate_repository_llm_summary(repo_name: str, all_prs: list, pr_resu
         If data is insufficient for a conclusion, state that explicitly.
         """
         
-        llm_manager = get_llm_manager()
+        llm_client = LLMClient()
         print(f" Generating comprehensive LLM summary for repository {repo_name}...")
         
         try:
-            llm_result = await llm_manager.generate_with_fallback(prompt, "walmart_llm_gateway")
+            llm_result = llm_client.call_llm(prompt)
             
-            if llm_result['success']:
-                summary_response = llm_result['response']
-                provider_used = llm_result['provider_used']
+            if llm_result.get('success', False):
+                summary_response = llm_result.get('response', '')
+                provider_used = 'LLM'
                 
                 print(f"\n EXECUTIVE REPOSITORY ASSESSMENT")
                 print("=" * 60)
@@ -744,14 +746,14 @@ NEXT STEPS:
         
         print(simple_summary)
 
-async def generate_no_pr_llm_summary(repo_url: str):
+def generate_no_pr_llm_summary(repo_url: str):
     """Generate LLM-powered summary for when no PRs are found"""
     print("\nGENERATING LLM-POWERED SUMMARY FOR NO-PR SCENARIO")
     print("="*60)
     
     try:
-        from llm_integration import get_llm_manager
-        llm_manager = get_llm_manager()
+        from llm_client import LLMClient
+        llm_client = LLMClient()
         
         prompt = f"""
         You are an AI assistant providing helpful analysis for a software development team.
@@ -768,12 +770,12 @@ async def generate_no_pr_llm_summary(repo_url: str):
         """
         
         print("  LLM is analyzing the no-PR scenario...")
-        llm_result = await llm_manager.generate_with_fallback(prompt, "walmart_llm_gateway")
+        llm_result = llm_client.call_llm(prompt)
         
-        if llm_result['success']:
+        if llm_result.get('success', False):
             print("\n  AI-Generated Summary:")
             print("-" * 40)
-            print(f"  {llm_result['response'].strip()}")
+            print(f"  {llm_result.get('response', 'No response').strip()}")
             print()
         else:
             print("  AI summary generation failed.")
@@ -1043,7 +1045,7 @@ Examples:
             print(f"  - Try with a different repository that has open PRs")
             print(f"  - Contact repository owner for access if needed")
             
-            await generate_no_pr_llm_summary(repo_url)
+            generate_no_pr_llm_summary(repo_url)
             
         all_repo_results.append(repo_result)
         

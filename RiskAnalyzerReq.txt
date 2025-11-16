@@ -113,7 +113,7 @@ No fluff. Here’s a complete, beginner-friendly spec for the **Release Risk Ana
 
 ---
 
-## C. 🧑‍💼 Release Decision Agent
+## C. Release Decision Agent
 
 **Purpose:** Produce final **Go/No-Go**, **risk_score**, and short **rationale**.
 

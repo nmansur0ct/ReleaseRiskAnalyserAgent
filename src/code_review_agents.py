@@ -12,7 +12,7 @@ from plugin_framework import (
     BaseAgentPlugin, AgentMetadata, AgentInput, AgentOutput,
     AgentCapability, ExecutionMode
 )
-from llm_integration import get_llm_manager
+from llm_client import LLMClient
 
 class PythonCodeReviewAgent(BaseAgentPlugin):
     """Python code quality and security review agent using LLM"""
@@ -113,7 +113,7 @@ class PythonCodeReviewAgent(BaseAgentPlugin):
     
     async def _analyze_with_llm(self, content: str, file_path: str) -> Dict[str, Any]:
         """Analyze code using LLM with strict anti-hallucination prompts"""
-        llm_manager = get_llm_manager()
+        llm_client = LLMClient()
         
         # Build prompt without f-string to avoid escaping issues
         analysis_prompt = """You are a code quality analyzer. Analyze the following Python code strictly based on the actual content provided.
@@ -159,17 +159,13 @@ Provide your analysis in STRICT JSON format with NO additional text:
 Only include issues that are verifiable from the code above. Return ONLY valid JSON, no markdown formatting. """
         
         try:
-            llm_response = await llm_manager.generate_with_fallback(
-                prompt=analysis_prompt,
-                max_tokens=2000,
-                temperature=0.1
-            )
+            llm_response = llm_client.call_llm(analysis_prompt)
             
-            if not llm_response:
+            if not llm_response.get('success', False):
                 return self._create_fallback_analysis(content)
             
             # Parse JSON response
-            response_text = llm_response.strip()
+            response_text = llm_response.get('response', '').strip()
             if response_text.startswith('```'):
                 lines = response_text.split('\n')
                 response_text = '\n'.join(lines[1:-1])
@@ -309,7 +305,7 @@ class JavaCodeReviewAgent(BaseAgentPlugin):
     
     async def _analyze_java_with_llm(self, content: str, file_path: str) -> Dict[str, Any]:
         """Analyze Java code using LLM"""
-        llm_manager = get_llm_manager()
+        llm_client = LLMClient()
         
         analysis_prompt = """You are a Java code quality analyzer. Analyze strictly based on actual content.
 
@@ -349,16 +345,12 @@ Return STRICT JSON format:
 Return ONLY valid JSON."""
         
         try:
-            llm_response = await llm_manager.generate_with_fallback(
-                prompt=analysis_prompt,
-                max_tokens=2000,
-                temperature=0.1
-            )
+            llm_response = llm_client.call_llm(analysis_prompt)
             
-            if not llm_response:
+            if not llm_response.get('success', False):
                 return self._create_fallback_analysis(content)
             
-            response_text = llm_response.strip()
+            response_text = llm_response.get('response', '').strip()
             if response_text.startswith('```'):
                 lines = response_text.split('\n')
                 response_text = '\n'.join(lines[1:-1])
@@ -468,7 +460,7 @@ class NodeJSCodeReviewAgent(BaseAgentPlugin):
         return ""
     
     async def _analyze_nodejs_with_llm(self, content: str, file_path: str) -> Dict[str, Any]:
-        llm_manager = get_llm_manager()
+        llm_client = LLMClient()
         
         analysis_prompt = """Analyze Node.js code strictly based on actual content.
 
@@ -496,16 +488,12 @@ Return JSON:
 }"""
         
         try:
-            llm_response = await llm_manager.generate_with_fallback(
-                prompt=analysis_prompt,
-                max_tokens=2000,
-                temperature=0.1
-            )
+            llm_response = llm_client.call_llm(analysis_prompt)
             
-            if not llm_response:
+            if not llm_response.get('success', False):
                 return {'issues': [], 'quality_score': 70, 'complexity_score': 50, 'comment_coverage': 50}
             
-            response_text = llm_response.strip()
+            response_text = llm_response.get('response', '').strip()
             if response_text.startswith('```'):
                 lines = response_text.split('\n')
                 response_text = '\n'.join(lines[1:-1])
@@ -584,7 +572,7 @@ class ReactJSCodeReviewAgent(BaseAgentPlugin):
         return ""
     
     async def _analyze_react_with_llm(self, content: str, file_path: str) -> Dict[str, Any]:
-        llm_manager = get_llm_manager()
+        llm_client = LLMClient()
         
         analysis_prompt = """Analyze React code. Only ACTUAL issues. EXACT line numbers. NO emojis.
 
@@ -600,11 +588,11 @@ Code:
 Return JSON: {"issues": [...], "quality_score": <num>, "complexity_score": <num>, "comment_coverage": <num>}"""
         
         try:
-            llm_response = await llm_manager.generate_with_fallback(prompt=analysis_prompt, max_tokens=2000, temperature=0.1)
-            if not llm_response:
+            llm_response = llm_client.call_llm(analysis_prompt)
+            if not llm_response.get('success', False):
                 return {'issues': [], 'quality_score': 70, 'complexity_score': 50, 'comment_coverage': 50}
             
-            response_text = llm_response.strip()
+            response_text = llm_response.get('response', '').strip()
             if response_text.startswith('```'):
                 lines = response_text.split('\n')
                 response_text = '\n'.join(lines[1:-1]).replace('json', '', 1).strip()
@@ -666,7 +654,7 @@ class BigQueryReviewAgent(BaseAgentPlugin):
         return file_contents.get(file_path, "")
     
     async def _analyze_sql_with_llm(self, content: str, file_path: str, db_type: str) -> Dict[str, Any]:
-        llm_manager = get_llm_manager()
+        llm_client = LLMClient()
         
         prompt = """Analyze """ + db_type + """ SQL. Only ACTUAL issues. NO emojis.
 
@@ -682,11 +670,11 @@ SQL:
 Return JSON: {"issues": [...], "quality_score": <num>, "complexity_score": <num>}"""
         
         try:
-            llm_response = await llm_manager.generate_with_fallback(prompt=prompt, max_tokens=2000, temperature=0.1)
-            if not llm_response:
+            llm_response = llm_client.call_llm(prompt)
+            if not llm_response.get('success', False):
                 return {'issues': [], 'quality_score': 70}
             
-            response_text = llm_response.strip()
+            response_text = llm_response.get('response', '').strip()
             if response_text.startswith('```'):
                 response_text = '\n'.join(response_text.split('\n')[1:-1]).replace('json', '', 1).strip()
             
@@ -729,15 +717,13 @@ class AzureSQLReviewAgent(BaseAgentPlugin):
             return AgentOutput(result={}, session_id=input_data.session_id)
     
     async def _analyze_sql(self, content: str, file_path: str) -> Dict[str, Any]:
-        llm_manager = get_llm_manager()
+        llm_client = LLMClient()
         try:
-            llm_response = await llm_manager.generate_with_fallback(
-                prompt="Analyze Azure SQL. Only actual issues. Return JSON: {'issues': [...], 'quality_score': <num>}\n\nSQL:\n" + content,
-                max_tokens=1500,
-                temperature=0.1
+            llm_response = llm_client.call_llm(
+                "Analyze Azure SQL. Only actual issues. Return JSON: {'issues': [...], 'quality_score': <num>}\n\nSQL:\n" + content
             )
-            if llm_response:
-                return json.loads(llm_response.strip().replace('```json', '').replace('```', ''))
+            if llm_response.get('success', False):
+                return json.loads(llm_response.get('response', '').strip().replace('```json', '').replace('```', ''))
         except Exception:
             pass
         return {'issues': [], 'quality_score': 70}
@@ -777,15 +763,13 @@ class PostgreSQLReviewAgent(BaseAgentPlugin):
             return AgentOutput(result={}, session_id=input_data.session_id)
     
     async def _analyze_sql(self, content: str) -> Dict[str, Any]:
-        llm_manager = get_llm_manager()
+        llm_client = LLMClient()
         try:
-            llm_response = await llm_manager.generate_with_fallback(
-                prompt="Analyze PostgreSQL. Return JSON: {'issues': [], 'quality_score': <num>}\n\n" + content,
-                max_tokens=1500,
-                temperature=0.1
+            llm_response = llm_client.call_llm(
+                "Analyze PostgreSQL. Return JSON: {'issues': [], 'quality_score': <num>}\n\n" + content
             )
-            if llm_response:
-                return json.loads(llm_response.strip().replace('```', ''))
+            if llm_response.get('success', False):
+                return json.loads(llm_response.get('response', '').strip().replace('```', ''))
         except Exception:
             pass
         return {'issues': [], 'quality_score': 70}
