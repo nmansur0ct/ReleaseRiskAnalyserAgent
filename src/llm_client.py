@@ -86,6 +86,11 @@ class LLMClient:
         self.timeout = int(os.getenv("LLM_TIMEOUT", "30"))
         self.verify_ssl = os.getenv("LLM_VERIFY_SSL", "false").lower() == "true"
         
+        # Walmart-specific headers (configurable)
+        self.wm_consumer_id = os.getenv("WM_CONSUMER_ID", "risk-agent-analyzer")
+        self.wm_service_name = os.getenv("WM_SVC_NAME", "risk-agent-analyzer")
+        self.wm_service_env = os.getenv("WM_SVC_ENV", "stage")
+        
         # Load PEM key if available (optional for some authentication methods)
         self.key_content = None
         if self.pem_file_path and os.path.exists(self.pem_file_path):
@@ -231,10 +236,13 @@ class LLMClient:
             headers = self._generate_headers(cons_id, key_content, "stage")
         
         elif use_gateway_key:
-            # Use simpler gateway key authentication
+            # Use simpler gateway key authentication with required Walmart headers
             headers = {
                 "Authorization": f"Bearer {self.gateway_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "WM_CONSUMER.ID": self.wm_consumer_id,
+                "WM_SVC.NAME": self.wm_service_name,
+                "WM_SVC.ENV": self.wm_service_env
             }
         
         # Prepare request payload - use simple format for Walmart LLM Gateway
