@@ -73,10 +73,31 @@ class GitProvider(ABC):
         pass
 
 class GitHubProvider(GitProvider):
-    """GitHub API provider"""
+    """GitHub API provider with support for GitHub Enterprise"""
     
     def __init__(self, access_token: Optional[str] = None):
-        super().__init__(access_token, "https://api.github.com")
+        # Default to public GitHub API
+        api_base_url = "https://api.github.com"
+        super().__init__(access_token, api_base_url)
+    
+    def _get_api_base_url_for_repo(self, repo_url: str) -> str:
+        """Determine the correct API base URL based on the repository URL"""
+        parsed_url = urlparse(repo_url.strip())
+        
+        if parsed_url.hostname:
+            hostname = parsed_url.hostname.lower()
+            
+            # Handle Walmart GitHub Enterprise
+            if 'walmart.com' in hostname or 'gecgithub01' in hostname:
+                # For Walmart GitHub Enterprise, use the same hostname with /api/v3
+                return f"https://{parsed_url.hostname}/api/v3"
+            
+            # Handle other GitHub Enterprise instances
+            elif hostname != 'github.com' and 'github' in hostname:
+                return f"https://{parsed_url.hostname}/api/v3"
+                
+        # Default to public GitHub
+        return "https://api.github.com"
     
 
     async def get_pull_request(self, repo_url: str, pr_number: int) -> Optional[Dict[str, Any]]:
@@ -87,7 +108,8 @@ class GitHubProvider(GitProvider):
         
         try:
             owner, repo, _ = self._parse_github_url(repo_url)
-            url = f"{self.api_base_url}/repos/{owner}/{repo}/pulls/{pr_number}"
+            api_base_url = self._get_api_base_url_for_repo(repo_url)
+            url = f"{api_base_url}/repos/{owner}/{repo}/pulls/{pr_number}"
             
             if self.session:
                 try:
@@ -118,7 +140,8 @@ class GitHubProvider(GitProvider):
 
         try:
             owner, repo, branch = self._parse_github_url(repo_url)
-            url = f"{self.api_base_url}/repos/{owner}/{repo}/pulls"
+            api_base_url = self._get_api_base_url_for_repo(repo_url)
+            url = f"{api_base_url}/repos/{owner}/{repo}/pulls"
             
             params = {
                 'state': state,
@@ -292,7 +315,8 @@ class GitHubProvider(GitProvider):
                 limit = git_config.get('pr_limit_per_repo', limit)
 
             owner, repo, branch = self._parse_github_url(repo_url)
-            url = f"{self.api_base_url}/repos/{owner}/{repo}/pulls"
+            api_base_url = self._get_api_base_url_for_repo(repo_url)
+            url = f"{api_base_url}/repos/{owner}/{repo}/pulls"
             
             base_params = {
                 'state': state,
