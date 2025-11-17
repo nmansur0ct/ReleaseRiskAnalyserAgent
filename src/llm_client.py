@@ -57,11 +57,28 @@ class LLMClient:
     
     def __init__(self):
         """Initialize the LLM client with environment-based configuration."""
+        # Try to use existing credential paths from .env
+        credentials_path = os.getenv("CREDENTIALS_PATH", "")
+        
+        # Set up authentication paths - use existing env vars if available, otherwise try standard paths
         self.pem_file_path = os.getenv("CONSUMER_PEM_FILE_PATH")
+        if not self.pem_file_path and credentials_path:
+            # Try common PEM file names in credentials directory
+            for pem_name in ["consumer.pem", "private_key.pem", "client.pem"]:
+                potential_path = os.path.join(credentials_path, pem_name)
+                if os.path.exists(potential_path):
+                    self.pem_file_path = potential_path
+                    break
+        
         self.consumer_id = os.getenv("CONSUMER_ID")
         self.ca_bundle_path = os.getenv("CA_BUNDLE_PATH")
-        self.gateway_url = os.getenv("LLM_GATEWAY_URL", "https://wmtllmgateway.stage.walmart.com/wmtllmgateway/v1/openai")
-        self.model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+        
+        # Gateway configuration - use existing Walmart settings as fallback
+        self.gateway_url = os.getenv("LLM_GATEWAY_URL") or os.getenv("WALMART_LLM_GATEWAY_URL", "https://wmtllmgateway.stage.walmart.com/wmtllmgateway/v1/openai")
+        self.gateway_key = os.getenv("WALMART_LLM_GATEWAY_KEY")
+        
+        # Model configuration
+        self.model = os.getenv("LLM_MODEL") or os.getenv("WALMART_LLM_MODEL", "gpt-4o-mini")
         self.model_version = os.getenv("LLM_MODEL_VERSION", "2024-07-18")
         self.api_version = os.getenv("LLM_API_VERSION", "2023-05-15")
         self.max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1000"))
@@ -69,10 +86,14 @@ class LLMClient:
         self.timeout = int(os.getenv("LLM_TIMEOUT", "30"))
         self.verify_ssl = os.getenv("LLM_VERIFY_SSL", "false").lower() == "true"
         
-        # Load PEM key if available
+        # Load PEM key if available (optional for some authentication methods)
         self.key_content = None
-        if self.pem_file_path:
-            self._load_pem_key()
+        if self.pem_file_path and os.path.exists(self.pem_file_path):
+            try:
+                self._load_pem_key()
+            except Exception as e:
+                logger.warning(f"Could not load PEM key from {self.pem_file_path}: {e}")
+                self.pem_file_path = None
     
     def _load_pem_key(self) -> None:
         """Load the PEM key from the configured file path."""
@@ -180,24 +201,41 @@ class LLMClient:
         req_timeout = timeout or self.timeout
         ssl_verify = verify_ssl if verify_ssl is not None else self.verify_ssl
         
-        # Validate required parameters
-        if not pem_path or not cons_id:
-            raise ValueError("PEM file path and consumer ID are required")
+        # Validate authentication - either PEM-based or gateway key
+        use_pem_auth = bool(pem_path and cons_id)
+        use_gateway_key = bool(self.gateway_key)
         
-        # Load PEM key if different from instance
-        key_content = self.key_content
-        if pem_path != self.pem_file_path:
-            try:
-                with open(pem_path, 'r') as f:
-                    key_content = f.read()
-            except Exception as e:
-                raise ValueError(f"Could not read PEM file {pem_path}: {e}")
+        if not use_pem_auth and not use_gateway_key:
+            raise ValueError("Either PEM file path + consumer ID or gateway key is required for authentication")
         
-        if not key_content:
-            raise ValueError("No valid PEM key content available")
+        headers = {}
         
-        # Generate headers
-        headers = self._generate_headers(cons_id, key_content, "stage")
+        if use_pem_auth:
+            # Validate PEM parameters
+            if not pem_path or not cons_id:
+                raise ValueError("PEM file path and consumer ID are required for PEM authentication")
+                
+            # Load PEM key if different from instance
+            key_content = self.key_content
+            if pem_path != self.pem_file_path:
+                try:
+                    with open(pem_path, 'r') as f:
+                        key_content = f.read()
+                except Exception as e:
+                    raise ValueError(f"Could not read PEM file {pem_path}: {e}")
+            
+            if not key_content:
+                raise ValueError("No valid PEM key content available")
+            
+            # Generate PEM-based headers
+            headers = self._generate_headers(cons_id, key_content, "stage")
+        
+        elif use_gateway_key:
+            # Use simpler gateway key authentication
+            headers = {
+                "Authorization": f"Bearer {self.gateway_key}",
+                "Content-Type": "application/json"
+            }
         
         # Prepare request payload (matching standalone_llm_caller.py structure)
         messages = []
