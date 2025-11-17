@@ -99,6 +99,56 @@ class GitHubProvider(GitProvider):
         # Default to public GitHub
         return "https://api.github.com"
     
+    def _check_repository_access(self, owner: str, repo: str, api_base_url: str):
+        """Check if we can access the repository and provide helpful debugging info"""
+        if not self.session:
+            logger.error("No session available for repository access check")
+            return
+            
+        try:
+            # Try to get basic repository information
+            repo_url = f"{api_base_url}/repos/{owner}/{repo}"
+            logger.info(f"Checking repository access: {repo_url}")
+            
+            response = self.session.get(repo_url)
+            
+            if response.status_code == 200:
+                repo_info = response.json()
+                logger.info(f"Repository exists: {repo_info.get('full_name')}")
+                logger.info(f"Repository is private: {repo_info.get('private', False)}")
+                logger.info(f"Repository default branch: {repo_info.get('default_branch')}")
+            elif response.status_code == 404:
+                logger.error(f"Repository not found: {owner}/{repo}")
+                logger.error("Possible causes:")
+                logger.error("1. Repository name is incorrect")
+                logger.error("2. Repository is private and token lacks access")
+                logger.error("3. Repository is in a different organization")
+                logger.error("4. URL format issue - browser URLs with /tree/branch are supported but repository must exist")
+                
+                # Try to list repositories the user has access to
+                user_repos_url = f"{api_base_url}/user/repos"
+                user_response = self.session.get(user_repos_url, params={'per_page': 100})
+                if user_response.status_code == 200:
+                    repos = user_response.json()
+                    logger.info(f"Token has access to {len(repos)} repositories")
+                    
+                    # Look for similar repository names
+                    similar_repos = [r['full_name'] for r in repos if repo.lower() in r['name'].lower() or 'risk' in r['name'].lower()]
+                    if similar_repos:
+                        logger.info(f"Similar repositories found: {similar_repos}")
+                        logger.info("Try using one of the similar repositories above instead")
+                else:
+                    logger.error(f"Could not list user repositories: {user_response.status_code}")
+                    
+            elif response.status_code == 403:
+                logger.error(f"Access forbidden to repository: {owner}/{repo}")
+                logger.error("Token may not have sufficient permissions")
+            else:
+                logger.error(f"Unexpected response checking repository: {response.status_code} - {response.text}")
+                
+        except Exception as e:
+            logger.error(f"Error checking repository access: {e}")
+    
 
     async def get_pull_request(self, repo_url: str, pr_number: int) -> Optional[Dict[str, Any]]:
         """Fetch a specific pull request"""
@@ -173,10 +223,16 @@ class GitHubProvider(GitProvider):
                                 logger.info(f"Fallback successful: Found {len(prs_data)} total open PRs.")
                             else:
                                 logger.error(f"Fallback fetch failed: {fallback_response.status_code} - {fallback_response.text}")
+                                # Try to get repository info to verify access
+                                self._check_repository_access(owner, repo, api_base_url)
 
                         return [self._transform_github_pr_data(pr) for pr in prs_data]
                     else:
                         logger.error(f"Failed to fetch PRs: {response.status_code} - {response.text}")
+                        logger.error(f"Request URL was: {url}")
+                        logger.error(f"Request params were: {params}")
+                        # Try to get repository info to verify access
+                        self._check_repository_access(owner, repo, api_base_url)
                         return []
                 except Exception as api_error:
                     logger.error(f"API call failed for PRs: {api_error}")
@@ -298,6 +354,89 @@ class GitHubProvider(GitProvider):
         except Exception as e:
             logger.error(f"Error fetching PR comments {pr_number} from {repo_url}: {e}")
             return []
+
+    async def get_repository_files(self, repo_url: str, branch: str = None, file_extensions: List[str] = None) -> List[Dict[str, Any]]:
+        """Fetch all files from repository for comprehensive code review"""
+        if not self.validate_config():
+            logger.error("GitHub provider not properly configured. Missing access token.")
+            return []
+        
+        try:
+            owner, repo, parsed_branch = self._parse_github_url(repo_url)
+            target_branch = branch or parsed_branch or "main"
+            
+            # Set default file extensions if not provided
+            if not file_extensions:
+                file_extensions = ['.py', '.js', '.ts', '.java', '.cpp', '.c', '.cs', '.php', '.rb', '.go', '.rs']
+            
+            api_base_url = self._get_api_base_url_for_repo(repo_url)
+            url = f"{api_base_url}/repos/{owner}/{repo}/git/trees/{target_branch}?recursive=1"
+            
+            if self.session:
+                try:
+                    response = self.session.get(url)
+                    if response.status_code == 200:
+                        tree_data = response.json()
+                        files = []
+                        
+                        for item in tree_data.get('tree', []):
+                            if item.get('type') == 'blob':  # Only files, not directories
+                                filename = item.get('path', '')
+                                
+                                # Filter by file extensions
+                                if any(filename.endswith(ext) for ext in file_extensions):
+                                    # Get file content
+                                    content_url = f"{api_base_url}/repos/{owner}/{repo}/contents/{filename}?ref={target_branch}"
+                                    content_response = self.session.get(content_url)
+                                    
+                                    file_info = {
+                                        'filename': filename,
+                                        'status': 'existing',
+                                        'additions': 0,  # Not applicable for existing files
+                                        'deletions': 0,  # Not applicable for existing files  
+                                        'changes': 0,    # Not applicable for existing files
+                                        'patch': '',     # Will be populated with actual content
+                                        'size': item.get('size', 0),
+                                        'sha': item.get('sha', ''),
+                                        'full_content': ''
+                                    }
+                                    
+                                    if content_response.status_code == 200:
+                                        content_data = content_response.json()
+                                        if content_data.get('encoding') == 'base64':
+                                            import base64
+                                            try:
+                                                file_content = base64.b64decode(content_data.get('content', '')).decode('utf-8')
+                                                file_info['full_content'] = file_content
+                                                # For compatibility with PR review, put content in patch field too
+                                                file_info['patch'] = file_content
+                                            except Exception as decode_error:
+                                                logger.warning(f"Could not decode file {filename}: {decode_error}")
+                                                file_info['full_content'] = f"# Could not decode file: {decode_error}"
+                                                file_info['patch'] = f"# Could not decode file: {decode_error}"
+                                    
+                                    files.append(file_info)
+                                    
+                                    # Limit to avoid API rate limits and large responses
+                                    if len(files) >= 50:  # Configurable limit
+                                        logger.warning(f"Reached file limit (50), stopping repository scan")
+                                        break
+                        
+                        logger.info(f"Fetched {len(files)} repository files for full code review")
+                        return files
+                    else:
+                        logger.error(f"Failed to fetch repository tree: {response.status_code} - {response.text}")
+                        return []
+                except Exception as api_error:
+                    logger.error(f"API call failed for repository files: {api_error}")
+                    return []
+            
+            logger.error("Session not available for GitHub provider.")
+            return []
+            
+        except Exception as e:
+            logger.error(f"Error fetching repository files from {repo_url}: {e}")
+            return []
     
 
     async def get_pull_requests(self, repo_url: str, state: str = "open", limit: int = 10) -> List[Dict[str, Any]]:
@@ -368,6 +507,10 @@ class GitHubProvider(GitProvider):
                             logger.info(f"Fallback successful: Found {len(prs_data)} total PRs with state '{state}'.")
                         else:
                             logger.error(f"Fallback fetch failed: {response.status_code} - {response.text}")
+                            logger.error(f"Fallback URL was: {url}")
+                            logger.error(f"Fallback params were: {base_params}")
+                            # Check repository access to provide helpful debugging
+                            self._check_repository_access(owner, repo, api_base_url)
                     except Exception as api_error:
                         logger.error(f"API call failed for fallback search: {api_error}")
 
@@ -398,6 +541,11 @@ class GitHubProvider(GitProvider):
             
         owner = path_parts[0]
         repo = path_parts[1]
+        
+        # Remove .git suffix from repository name if present
+        if repo.endswith('.git'):
+            repo = repo[:-4]
+        
         branch = None
         
         # Check for branch information in the path, e.g., /tree/v1
@@ -612,6 +760,15 @@ class GitManager:
             return []
         
         return await git_provider.get_pull_request_comments(repo_url, pr_number)
+    
+    async def fetch_repository_files(self, repo_url: str, branch: str = None, file_extensions: List[str] = None, provider: str = "github") -> List[Dict[str, Any]]:
+        """Fetch all files from repository for comprehensive code review"""
+        git_provider = self.get_provider(provider)
+        if not git_provider:
+            logger.error(f"Git provider '{provider}' not available")
+            return []
+        
+        return await git_provider.get_repository_files(repo_url, branch, file_extensions)
     
     def detect_provider_from_url(self, repo_url: str) -> str:
         """Detect the appropriate provider based on repository URL"""

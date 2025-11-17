@@ -40,8 +40,16 @@ class PythonCodeReviewAgent(BaseAgentPlugin):
             pr_data = input_data.data
             changed_files = pr_data.get('changed_files', [])
             
-            # Filter Python files
-            python_files = [f for f in changed_files if f.endswith('.py')]
+            # Filter Python files - handle both string filenames and file dictionaries
+            python_files = []
+            for f in changed_files:
+                if isinstance(f, str):
+                    if f.endswith('.py'):
+                        python_files.append(f)
+                elif isinstance(f, dict):
+                    filename = f.get('filename', '')
+                    if filename.endswith('.py'):
+                        python_files.append(f)
             
             if not python_files:
                 return AgentOutput(
@@ -53,9 +61,15 @@ class PythonCodeReviewAgent(BaseAgentPlugin):
             
             # Analyze each file
             file_analyses = []
-            for file_path in python_files:
+            for file_info in python_files:
                 try:
-                    file_content = self._get_file_content(file_path, pr_data)
+                    if isinstance(file_info, str):
+                        file_path = file_info
+                        file_content = self._get_file_content(file_path, pr_data)
+                    else:  # Dictionary with file info
+                        file_path = file_info.get('filename', '')
+                        file_content = file_info.get('full_content') or file_info.get('patch', '')
+                        
                     if file_content:
                         analysis = await self._analyze_with_llm(file_content, file_path)
                         analysis['file'] = file_path
@@ -241,7 +255,17 @@ class JavaCodeReviewAgent(BaseAgentPlugin):
         try:
             pr_data = input_data.data
             changed_files = pr_data.get('changed_files', [])
-            java_files = [f for f in changed_files if f.endswith('.java')]
+            
+            # Filter Java files - handle both string filenames and file dictionaries
+            java_files = []
+            for f in changed_files:
+                if isinstance(f, str):
+                    if f.endswith('.java'):
+                        java_files.append(f)
+                elif isinstance(f, dict):
+                    filename = f.get('filename', '')
+                    if filename.endswith('.java'):
+                        java_files.append(f)
             
             if not java_files:
                 return AgentOutput(
@@ -252,9 +276,15 @@ class JavaCodeReviewAgent(BaseAgentPlugin):
                 )
             
             file_analyses = []
-            for file_path in java_files:
+            for file_info in java_files:
                 try:
-                    file_content = self._get_file_content(file_path, pr_data)
+                    if isinstance(file_info, str):
+                        file_path = file_info
+                        file_content = self._get_file_content(file_path, pr_data)
+                    else:  # Dictionary with file info
+                        file_path = file_info.get('filename', '')
+                        file_content = file_info.get('full_content') or file_info.get('patch', '')
+                        
                     if file_content:
                         analysis = await self._analyze_java_with_llm(file_content, file_path)
                         analysis['file'] = file_path
@@ -407,7 +437,17 @@ class NodeJSCodeReviewAgent(BaseAgentPlugin):
         try:
             pr_data = input_data.data
             changed_files = pr_data.get('changed_files', [])
-            js_files = [f for f in changed_files if f.endswith(('.js', '.ts'))]
+            
+            # Filter JS/TS files - handle both string filenames and file dictionaries
+            js_files = []
+            for f in changed_files:
+                if isinstance(f, str):
+                    if f.endswith(('.js', '.ts')):
+                        js_files.append(f)
+                elif isinstance(f, dict):
+                    filename = f.get('filename', '')
+                    if filename.endswith(('.js', '.ts')):
+                        js_files.append(f)
             
             if not js_files:
                 return AgentOutput(
@@ -418,9 +458,15 @@ class NodeJSCodeReviewAgent(BaseAgentPlugin):
                 )
             
             file_analyses = []
-            for file_path in js_files:
+            for file_info in js_files:
                 try:
-                    file_content = self._get_file_content(file_path, pr_data)
+                    if isinstance(file_info, str):
+                        file_path = file_info
+                        file_content = self._get_file_content(file_path, pr_data)
+                    else:  # Dictionary with file info
+                        file_path = file_info.get('filename', '')
+                        file_content = file_info.get('full_content') or file_info.get('patch', '')
+                        
                     if file_content:
                         analysis = await self._analyze_nodejs_with_llm(file_content, file_path)
                         analysis['file'] = file_path

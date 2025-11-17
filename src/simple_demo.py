@@ -256,7 +256,7 @@ Pull Request Data:
 - Created At: {pr_data.get('created_at', 'N/A')}
 - Changes: +{pr_data.get('additions', 0)} additions, -{pr_data.get('deletions', 0)} deletions
 - Files Modified: {pr_data.get('changed_files_count', 0)}
-- Body: {pr_data.get('body', 'No description provided.')[:500]}
+- Body: {(pr_data.get('body') or 'No description provided.')[:500]}
 
 Based on your role as '{plugin_name}', provide a JSON object with the specified fields.
 """
@@ -362,7 +362,32 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
     print(f"EXECUTING CODE REVIEW AGENTS...")
     print("-" * 60)
     session_id = f"pr_{pr_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    code_review_results = await execute_code_review_agents(pr_data, session_id)
+    
+    # Check code review mode from environment
+    env_config = get_env_config()
+    code_review_mode = env_config.get_code_review_mode()
+    
+    # Enhance PR data with additional files if full repository review is enabled
+    enhanced_pr_data = pr_data.copy()
+    if code_review_mode == "full_repo":
+        print(f"  Full repository code review mode enabled...")
+        try:
+            from git_integration import get_git_manager
+            git_manager = get_git_manager()
+            repo_files = await git_manager.fetch_repository_files(repo_url)
+            
+            # Combine PR changed files with repository files
+            pr_changed_files = pr_data.get('changed_files', [])
+            all_files = pr_changed_files + repo_files
+            enhanced_pr_data['changed_files'] = all_files
+            print(f"  Added {len(repo_files)} repository files to code review (total: {len(all_files)} files)")
+        except Exception as e:
+            print(f"  Warning: Could not fetch repository files for full review: {e}")
+            print(f"  Falling back to PR-only review mode")
+    else:
+        print(f"  PR-only code review mode (changed files only)")
+    
+    code_review_results = await execute_code_review_agents(enhanced_pr_data, session_id)
     print()
     
     # Perform detailed plugin analysis for this specific PR
@@ -372,7 +397,12 @@ async def analyze_single_pr_with_llm(pr_data: Dict[str, Any], repo_url: str, pr_
     # Plugin analyses with actual PR data
     plugin_results = {}
     
-    # Plugin 1: Change Log Summarizer
+    # Ensure pr_data is valid before proceeding
+    if not pr_data:
+        print("ERROR: PR data is None or empty. Skipping LLM analysis.")
+        return {"error": "PR data is None or empty"}
+    
+    # Plugin 1: Change Log Summarizer  
     plugin_results['change_log'] = execute_plugin_with_llm("change_log_summarizer", pr_data)
     
     # Plugin 2: Security Analyzer  
@@ -789,7 +819,7 @@ async def generate_ai_executive_summary(all_results: list):
     """
     Generate a real AI-powered executive summary for the analysis results.
     """
-    llm_manager = get_llm_manager()
+    llm_client = LLMClient()
     
     # Create a summary of all PRs for the prompt
     pr_summaries = []
@@ -818,16 +848,17 @@ Your summary should highlight:
 Do not invent details. Base your summary strictly on the data provided.
 """
 
-    summary_result = await llm_manager.generate_with_fallback(prompt, "walmart_llm_gateway")
+    summary_result = llm_client.call_llm(prompt)
 
-    if summary_result['success']:
-        return summary_result['response']
+    if summary_result.get('success'):
+        return summary_result.get('response', summary_result.get('text', ''))
     else:
         return "AI executive summary could not be generated due to an error."
 
 async def generate_comprehensive_summary_report(all_results: list, repo_urls: Optional[list] = None):
+
     """
-    Generate a comprehensive summary report for all analyzed repositories
+    Generate a comprehensive summary report for all analyzed repositories with detailed sections
     """
     
     # Get current timestamp for report filename
@@ -846,59 +877,300 @@ async def generate_comprehensive_summary_report(all_results: list, repo_urls: Op
     report_content = []
     
     # Header
-    report_content.append("="*100)
-    report_content.append("                    COMPREHENSIVE AUDIT & COMPLIANCE REPORT")
-    report_content.append("               PULL REQUEST ANALYSIS AND RISK ASSESSMENT")
-    report_content.append("="*100)
+    report_content.append("="*120)
+    report_content.append("                         COMPREHENSIVE CODE REVIEW & RISK ASSESSMENT REPORT")
+    report_content.append("                               REPOSITORY ANALYSIS AND COMPLIANCE AUDIT")
+    report_content.append("="*120)
     report_content.append("")
+    
+
+    # Get environment config for analysis mode
+    env_config = get_env_config()
+    analysis_mode = env_config.get_code_review_mode() if hasattr(env_config, 'get_code_review_mode') else 'full_repo'
     
     # Metadata
     report_content.append("REPORT METADATA:")
-    report_content.append("-" * 100)
-    report_content.append(f"Generated Date/Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ")
-    report_content.append("Report Type: Multi-Repository Pull Request Analysis")
-    report_content.append("Analysis Framework: Hybrid LLM + Heuristic Risk Assessment")
-    report_content.append("Compliance Standards: PCI DSS, GDPR, SOX")
+    report_content.append("-" * 120)
+    report_content.append(f"Generated Date/Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    report_content.append("Report Type: Comprehensive Repository Code Review Analysis")
+    report_content.append("Analysis Framework: AI-Powered Multi-Agent Risk Assessment")
+    report_content.append("Compliance Standards: PCI DSS, GDPR, SOX, OWASP Top 10")
     report_content.append("Security Framework: OWASP + Enterprise Security Policies")
     report_content.append("Purpose: Technical Review, Audit Trail, Compliance Verification")
-    report_content.append("\n")
-    
-    # Section 1: Executive Summary
-    report_content.append("="*100)
-    report_content.append("SECTION 1: EXECUTIVE SUMMARY")
-    report_content.append("="*100)
+    report_content.append(f"Analysis Mode: {analysis_mode.upper()}")
     report_content.append("")
     
-    # 1.1 Scope of Analysis
-    total_repos = len(all_results)
-    repos_with_prs = sum(1 for r in all_results if r['prs'])
-    total_prs_reviewed = sum(len(r['prs']) for r in all_results)
-    
-    report_content.append("1.1 SCOPE OF ANALYSIS:")
-    report_content.append("-" * 100)
-    report_content.append(f"Total Repositories Analyzed: {total_repos}")
-    report_content.append(f"Repositories with Active PRs: {repos_with_prs}")
-    report_content.append(f"Total Pull Requests Reviewed: {total_prs_reviewed}")
-    report_content.append("")
-    report_content.append("Repositories Under Review:")
-    if repo_urls:
-        for i, url in enumerate(repo_urls, 1):
-            report_content.append(f"  {i}. {url}")
+    # SECTION 1: GIT REPOSITORY DETAILS
+    report_content.append("="*120)
+    report_content.append("SECTION 1: GIT REPOSITORY INFORMATION")
+    report_content.append("="*120)
     report_content.append("")
     
-    # Add rest of the report generation logic here...
+    for i, result in enumerate(all_results, 1):
+        repo_url = repo_urls[i-1] if repo_urls and i-1 < len(repo_urls) else "N/A"
+        report_content.append(f"1.{i} REPOSITORY #{i}:")
+        report_content.append("-" * 120)
+        
+        # Repository basic info
+        report_content.append(f"Repository URL: {repo_url}")
+        report_content.append(f"Repository Name: {repo_url.split('/')[-1].replace('.git', '') if repo_url != 'N/A' else 'Unknown'}")
+        report_content.append(f"Primary Branch: {result.get('default_branch', 'main')}")
+        report_content.append(f"Analysis Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # Repository statistics
+        if 'repository_stats' in result:
+            stats = result['repository_stats']
+            report_content.append(f"Total Files Analyzed: {stats.get('total_files', 0)}")
+            report_content.append(f"Lines of Code: {stats.get('total_lines', 0)}")
+            report_content.append(f"File Types: {', '.join(stats.get('file_types', []))}")
+            report_content.append(f"Languages Detected: {', '.join(stats.get('languages', []))}")
+        
+        # Branch information
+        if 'branches' in result:
+            report_content.append(f"Active Branches: {len(result['branches'])}")
+            for branch in result['branches'][:5]:  # Show top 5 branches
+                report_content.append(f"  - {branch.get('name', 'Unknown')}")
+        
+        report_content.append("")
+    
+    # SECTION 2: PULL REQUEST DETAILS
+    report_content.append("="*120)
+    report_content.append("SECTION 2: PULL REQUEST ANALYSIS")
+    report_content.append("="*120)
+    report_content.append("")
+    
+    total_prs = 0
+    for i, result in enumerate(all_results, 1):
+        if result.get('prs'):
+            total_prs += len(result['prs'])
+            report_content.append(f"2.{i} REPOSITORY #{i} PULL REQUESTS:")
+            report_content.append("-" * 120)
+            
+            for j, pr in enumerate(result['prs'], 1):
+                report_content.append(f"2.{i}.{j} PULL REQUEST #{j}:")
+                report_content.append(f"Title: {pr.get('title', 'N/A')}")
+                report_content.append(f"Number: #{pr.get('number', 'N/A')}")
+                report_content.append(f"State: {pr.get('state', 'N/A').upper()}")
+                report_content.append(f"Author: {pr.get('user', {}).get('login', 'Unknown')}")
+                report_content.append(f"Created: {pr.get('created_at', 'N/A')}")
+                report_content.append(f"Updated: {pr.get('updated_at', 'N/A')}")
+                report_content.append(f"Base Branch: {pr.get('base', {}).get('ref', 'N/A')}")
+                report_content.append(f"Head Branch: {pr.get('head', {}).get('ref', 'N/A')}")
+                report_content.append(f"Files Changed: {pr.get('changed_files', 0)}")
+                report_content.append(f"Additions: +{pr.get('additions', 0)}")
+                report_content.append(f"Deletions: -{pr.get('deletions', 0)}")
+                report_content.append(f"PR URL: {pr.get('html_url', 'N/A')}")
+                
+                # PR Description
+                if pr.get('body'):
+                    description = pr['body'][:500] + "..." if len(pr['body']) > 500 else pr['body']
+                    report_content.append(f"Description: {description}")
+                
+                report_content.append("")
+        else:
+            report_content.append(f"2.{i} REPOSITORY #{i}: No Pull Requests Found")
+            report_content.append("")
+    
+    if total_prs == 0:
+        report_content.append("NOTE: No pull requests found. Performing full repository code review.")
+        report_content.append("")
+    
+    # SECTION 3: CODE REVIEW COMMENTS & FINDINGS
+    report_content.append("="*120)
+    report_content.append("SECTION 3: DETAILED CODE REVIEW ANALYSIS")
+    report_content.append("="*120)
+    report_content.append("")
+    
+    # Count issues by severity
+    total_issues = 0
+    critical_issues = 0
+    major_issues = 0
+    minor_issues = 0
+    good_practices = 0
+    
+    for i, result in enumerate(all_results, 1):
+        report_content.append(f"3.{i} REPOSITORY #{i} CODE REVIEW:")
+        report_content.append("-" * 120)
+        
+        # Agent results summary
+        agents = ['python_agent', 'java_agent', 'nodejs_agent', 'general_agent']
+        repo_issues = 0
+        
+        for agent in agents:
+            if agent in result:
+                agent_result = result[agent]
+                if isinstance(agent_result, dict) and 'response' in agent_result:
+                    response = agent_result['response']
+                    
+                    # Extract issue counts from response
+                    if 'critical' in response.lower():
+                        critical_count = response.lower().count('critical')
+                        critical_issues += critical_count
+                        repo_issues += critical_count
+                    
+                    if 'major' in response.lower() or 'high' in response.lower():
+                        major_count = response.lower().count('major') + response.lower().count('high')
+                        major_issues += major_count
+                        repo_issues += major_count
+                    
+                    if 'minor' in response.lower() or 'low' in response.lower():
+                        minor_count = response.lower().count('minor') + response.lower().count('low')
+                        minor_issues += minor_count
+                        repo_issues += minor_count
+                    
+                    if 'good' in response.lower() or 'excellent' in response.lower():
+                        good_count = response.lower().count('good') + response.lower().count('excellent')
+                        good_practices += good_count
+        
+        total_issues += repo_issues
+        report_content.append(f"Total Issues Found: {repo_issues}")
+        report_content.append("")
+        
+        # Detailed agent analysis
+        for agent in agents:
+            if agent in result:
+                agent_name = agent.replace('_agent', '').upper()
+                agent_result = result[agent]
+                
+                if isinstance(agent_result, dict) and 'response' in agent_result:
+                    report_content.append(f"3.{i}.{agents.index(agent)+1} {agent_name} ANALYSIS:")
+                    report_content.append(f"Files Analyzed: {agent_result.get('files_analyzed', 'N/A')}")
+                    
+                    # Parse and format the response
+                    response = agent_result['response']
+                    
+                    # Split response into sections
+                    sections = response.split('\n\n')
+                    for section in sections:
+                        if section.strip():
+                            report_content.append(section.strip())
+                    
+                    report_content.append("")
+        
+        report_content.append("")
+    
+    # SECTION 4: QUALITY ASSESSMENT & CLASSIFICATION
+    report_content.append("="*120)
+    report_content.append("SECTION 4: QUALITY ASSESSMENT & RISK CLASSIFICATION")
+    report_content.append("="*120)
+    report_content.append("")
+    
+    # Calculate overall quality score
+    if total_issues > 0:
+        critical_score = (critical_issues / total_issues) * 100
+        major_score = (major_issues / total_issues) * 100
+        minor_score = (minor_issues / total_issues) * 100
+    else:
+        critical_score = major_score = minor_score = 0
+    
+    # Determine overall classification
+    if critical_issues > 5 or critical_score > 30:
+        overall_classification = "BAD"
+        risk_level = "HIGH"
+        recommendation = "IMMEDIATE ACTION REQUIRED - Critical security and quality issues detected"
+    elif critical_issues > 0 or major_issues > 10 or critical_score > 10:
+        overall_classification = "OK"
+        risk_level = "MEDIUM"
+        recommendation = "Review and remediation recommended - Multiple issues need attention"
+    else:
+        overall_classification = "GOOD"
+        risk_level = "LOW"
+        recommendation = "Code quality acceptable - Minor improvements suggested"
+    
+    report_content.append("4.1 OVERALL QUALITY CLASSIFICATION:")
+    report_content.append("-" * 120)
+    report_content.append(f"CLASSIFICATION: {overall_classification}")
+    report_content.append(f"RISK LEVEL: {risk_level}")
+    report_content.append(f"RECOMMENDATION: {recommendation}")
+    report_content.append("")
+    
+    report_content.append("4.2 ISSUE BREAKDOWN:")
+    report_content.append("-" * 120)
+    report_content.append(f"CRITICAL Issues: {critical_issues} ({critical_score:.1f}%) - Immediate attention required")
+    report_content.append(f"MAJOR Issues: {major_issues} ({major_score:.1f}%) - Should be addressed soon") 
+    report_content.append(f"MINOR Issues: {minor_issues} ({minor_score:.1f}%) - Can be addressed in future releases")
+    report_content.append(f"GOOD Practices: {good_practices} - Positive code patterns identified")
+    report_content.append(f"TOTAL Issues: {total_issues}")
+    report_content.append("")
+    
+    report_content.append("4.3 DETAILED CLASSIFICATION CRITERIA:")
+    report_content.append("-" * 120)
+    report_content.append("GOOD (Low Risk):")
+    report_content.append("  - No critical security vulnerabilities")
+    report_content.append("  - Minimal code quality issues")
+    report_content.append("  - Good coding practices followed")
+    report_content.append("  - Proper error handling and documentation")
+    report_content.append("")
+    report_content.append("OK (Medium Risk):")
+    report_content.append("  - Some security or quality concerns")
+    report_content.append("  - Multiple non-critical issues identified")
+    report_content.append("  - Acceptable but could be improved")
+    report_content.append("  - Review and remediation recommended")
+    report_content.append("")
+    report_content.append("BAD (High Risk):")
+    report_content.append("  - Critical security vulnerabilities present")
+    report_content.append("  - Significant code quality issues")
+    report_content.append("  - Poor coding practices")
+    report_content.append("  - Immediate action and review required")
+    report_content.append("")
+    
+    # SECTION 5: EXECUTIVE SUMMARY
+    report_content.append("="*120)
+    report_content.append("SECTION 5: EXECUTIVE SUMMARY & RECOMMENDATIONS")
+    report_content.append("="*120)
+    report_content.append("")
     
     # Generate AI summary
     ai_summary = await generate_ai_executive_summary(all_results)
-    report_content.append("\nAI-POWERED EXECUTIVE SUMMARY:")
-    report_content.append("-" * 100)
+    report_content.append("5.1 AI-POWERED EXECUTIVE SUMMARY:")
+    report_content.append("-" * 120)
     report_content.append(ai_summary)
+    report_content.append("")
+    
+    # Key metrics summary
+    report_content.append("5.2 KEY METRICS SUMMARY:")
+    report_content.append("-" * 120)
+    report_content.append(f"Repositories Analyzed: {len(all_results)}")
+    report_content.append(f"Pull Requests Reviewed: {total_prs}")
+    report_content.append(f"Total Issues Identified: {total_issues}")
+    report_content.append(f"Critical Issues: {critical_issues}")
+    report_content.append(f"Overall Risk Level: {risk_level}")
+    report_content.append(f"Quality Classification: {overall_classification}")
+    report_content.append("")
+    
+    # Recommendations
+    report_content.append("5.3 ACTIONABLE RECOMMENDATIONS:")
+    report_content.append("-" * 120)
+    if critical_issues > 0:
+        report_content.append("1. IMMEDIATE: Address all critical security vulnerabilities")
+        report_content.append("2. URGENT: Review and fix major code quality issues")
+    if major_issues > 0:
+        report_content.append("3. HIGH PRIORITY: Implement code review process improvements")
+        report_content.append("4. MEDIUM PRIORITY: Address major code quality concerns")
+    if minor_issues > 0:
+        report_content.append("5. LOW PRIORITY: Resolve minor code quality issues")
+    
+    report_content.append("6. ONGOING: Establish automated code quality gates")
+    report_content.append("7. PROCESS: Implement continuous security scanning")
+    report_content.append("")
+    
+    # Footer
+    report_content.append("="*120)
+    report_content.append("END OF REPORT - Generated by Risk Agent Analyzer")
+    report_content.append(f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    report_content.append("="*120)
     
     # Write report to file
     try:
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write("\n".join(report_content))
-        print(f"\nReport saved to: {report_path}")
+        print(f"\nComprehensive report saved to: {report_path}")
+        print(f"Report Summary:")
+        print(f"  - Classification: {overall_classification}")
+        print(f"  - Risk Level: {risk_level}")
+        print(f"  - Total Issues: {total_issues} (Critical: {critical_issues}, Major: {major_issues}, Minor: {minor_issues})")
+        print(f"  - Repositories: {len(all_results)}")
+        print(f"  - Pull Requests: {total_prs}")
     except IOError as e:
         print(f"\nError saving report: {e}")
 
@@ -937,7 +1209,7 @@ Examples:
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="reports",
+        default="../reports",
         help="Directory to save analysis reports"
     )
     

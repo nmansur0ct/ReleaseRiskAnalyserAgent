@@ -161,6 +161,10 @@ class EnvironmentConfig:
             'debug': self.get('ENABLE_DEBUG', False, bool)
         }
     
+    def get_code_review_mode(self) -> str:
+        """Get code review mode configuration"""
+        return self.get('CODE_REVIEW_MODE', 'pr_only')
+    
     def merge_with_yaml_config(self, yaml_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Merge environment configuration with YAML configuration
