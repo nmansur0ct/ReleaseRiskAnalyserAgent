@@ -57,28 +57,11 @@ class LLMClient:
     
     def __init__(self):
         """Initialize the LLM client with environment-based configuration."""
-        # Try to use existing credential paths from .env
-        credentials_path = os.getenv("CREDENTIALS_PATH", "/Users/n0m08hp/RiskAgentAnalyzer")
-        
-        # Set up authentication paths - use existing env vars if available, otherwise try standard paths
         self.pem_file_path = os.getenv("CONSUMER_PEM_FILE_PATH")
-        if not self.pem_file_path and credentials_path:
-            # Try common PEM file names in credentials directory
-            for pem_name in ["private_key.pem"]:
-                potential_path = os.path.join(credentials_path, pem_name)
-                if os.path.exists(potential_path):
-                    self.pem_file_path = potential_path
-                    break
-        
         self.consumer_id = os.getenv("CONSUMER_ID")
         self.ca_bundle_path = os.getenv("CA_BUNDLE_PATH")
-        
-        # Gateway configuration - use existing Walmart settings as fallback
-        self.gateway_url = os.getenv("LLM_GATEWAY_URL") or os.getenv("WALMART_LLM_GATEWAY_URL", "https://wmtllmgateway.stage.walmart.com/wmtllmgateway/v1/openai")
-        self.gateway_key = os.getenv("WALMART_LLM_GATEWAY_KEY")
-        
-        # Model configuration
-        self.model = os.getenv("LLM_MODEL") or os.getenv("WALMART_LLM_MODEL", "gpt-4o-mini")
+        self.gateway_url = os.getenv("LLM_GATEWAY_URL", "https://wmtllmgateway.stage.walmart.com/wmtllmgateway/v1/openai")
+        self.model = os.getenv("LLM_MODEL", "gpt-4o-mini")
         self.model_version = os.getenv("LLM_MODEL_VERSION", "2024-07-18")
         self.api_version = os.getenv("LLM_API_VERSION", "2023-05-15")
         self.max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1000"))
@@ -86,19 +69,10 @@ class LLMClient:
         self.timeout = int(os.getenv("LLM_TIMEOUT", "30"))
         self.verify_ssl = os.getenv("LLM_VERIFY_SSL", "false").lower() == "true"
         
-        # Walmart-specific headers (configurable)
-        self.wm_consumer_id = os.getenv("WM_CONSUMER_ID", "risk-agent-analyzer")
-        self.wm_service_name = os.getenv("WM_SVC_NAME", "risk-agent-analyzer")
-        self.wm_service_env = os.getenv("WM_SVC_ENV", "stage")
-        
-        # Load PEM key if available (optional for some authentication methods)
+        # Load PEM key if available
         self.key_content = None
-        if self.pem_file_path and os.path.exists(self.pem_file_path):
-            try:
-                self._load_pem_key()
-            except Exception as e:
-                logger.warning(f"Could not load PEM key from {self.pem_file_path}: {e}")
-                self.pem_file_path = None
+        if self.pem_file_path:
+            self._load_pem_key()
     
     def _load_pem_key(self) -> None:
         """Load the PEM key from the configured file path."""
@@ -206,83 +180,54 @@ class LLMClient:
         req_timeout = timeout or self.timeout
         ssl_verify = verify_ssl if verify_ssl is not None else self.verify_ssl
         
-        # Validate authentication - either PEM-based or gateway key
-        use_pem_auth = bool(pem_path and cons_id)
-        use_gateway_key = bool(self.gateway_key)
+        # Validate required parameters
+        if not pem_path or not cons_id:
+            raise ValueError("PEM file path and consumer ID are required")
         
-        if not use_pem_auth and not use_gateway_key:
-            raise ValueError("Either PEM file path + consumer ID or gateway key is required for authentication")
+        # Load PEM key if different from instance
+        key_content = self.key_content
+        if pem_path != self.pem_file_path:
+            try:
+                with open(pem_path, 'r') as f:
+                    key_content = f.read()
+            except Exception as e:
+                raise ValueError(f"Could not read PEM file {pem_path}: {e}")
         
-        headers = {}
+        if not key_content:
+            raise ValueError("No valid PEM key content available")
         
-        if use_pem_auth:
-            # Validate PEM parameters
-            if not pem_path or not cons_id:
-                raise ValueError("PEM file path and consumer ID are required for PEM authentication")
-                
-            # Load PEM key if different from instance
-            key_content = self.key_content
-            if pem_path != self.pem_file_path:
-                try:
-                    with open(pem_path, 'r') as f:
-                        key_content = f.read()
-                except Exception as e:
-                    raise ValueError(f"Could not read PEM file {pem_path}: {e}")
+        # Generate headers
+        headers = self._generate_headers(cons_id, key_content, "stage")
+        
+        # Prepare request payload (matching standalone_llm_caller.py structure)
+        messages = []
+        if system_message:
+            messages.append({"role": "system", "content": system_message})
+        elif context:
+            system_msg = f"""You are a helpful assistant. Answer questions based on the provided context.
             
-            if not key_content:
-                raise ValueError("No valid PEM key content available")
-            
-            # Generate PEM-based headers
-            headers = self._generate_headers(cons_id, key_content, "stage")
-        
-        elif use_gateway_key:
-            # Use simpler gateway key authentication with required Walmart headers
-            headers = {
-                "Authorization": f"Bearer {self.gateway_key}",
-                "Content-Type": "application/json",
-                "WM_CONSUMER.ID": self.wm_consumer_id,
-                "WM_SVC.NAME": self.wm_service_name,
-                "WM_SVC.ENV": self.wm_service_env
-            }
-        
-        # Prepare request payload - use simple format for Walmart LLM Gateway
-        if use_gateway_key:
-            # Use simple Walmart gateway format
-            payload = {
-                "model": model_name,
-                "prompt": query,
-                "max_tokens": max_tok,
-                "temperature": temp
-            }
-            url = f"{gw_url}/generate" if not gw_url.endswith('/generate') else gw_url
-        else:
-            # Use more complex format for PEM-based authentication
-            messages = []
-            if system_message:
-                messages.append({"role": "system", "content": system_message})
-            elif context:
-                system_msg = f"""You are a helpful assistant. Answer questions based on the provided context.
-                
-                Context: {context}
+            Context: {context}
 
-                Answer the user's question based on this context. If the context doesn't contain the information needed, 
-                say "I don't have information about that in the provided context.\""""
-                messages.append({"role": "system", "content": system_msg})
-            
-            messages.append({"role": "user", "content": query})
-            
-            payload = {
-                "model": model_name,
-                "model-version": model_ver,
-                "api-version": api_ver,
-                "task": "chat/completions",
-                "model-params": {
-                    "messages": messages,
-                    "max_tokens": max_tok,
-                    "temperature": temp,
-                }
+            Answer the user's question based on this context. If the context doesn't contain the information needed, 
+            say "I don't have information about that in the provided context.\""""
+            messages.append({"role": "system", "content": system_msg})
+        
+        messages.append({"role": "user", "content": query})
+        
+        payload = {
+            "model": model_name,
+            "model-version": model_ver,
+            "api-version": api_ver,
+            "task": "chat/completions",
+            "model-params": {
+                "messages": messages,
+                "max_tokens": max_tok,
+                "temperature": temp,
             }
-            url = gw_url
+        }
+        
+        # Use gateway URL directly (not appending /chat/completions like standalone_llm_caller.py)
+        url = gw_url
         
         # Configure SSL verification (matching standalone_llm_caller.py pattern)
         if ssl_verify and ca_bundle:
@@ -306,14 +251,10 @@ class LLMClient:
             
             if response.status_code != 200:
                 logger.error(f"API request failed with status {response.status_code}")
-                logger.error(f"Request URL: {url}")
-                logger.error(f"Request payload: {payload}")
                 try:
                     error_detail = response.json()
-                    logger.error(f"Error response: {error_detail}")
                 except:
                     error_detail = response.text
-                    logger.error(f"Error response (raw): {error_detail}")
                 return {
                     "success": False,
                     "error": f"HTTP {response.status_code}",
@@ -371,21 +312,12 @@ class LLMClient:
     def _extract_response_text(self, response_json: Dict[str, Any]) -> str:
         """Extract response text from API response."""
         try:
-            # Handle Walmart LLM Gateway format (simple response field)
-            if "response" in response_json:
-                return response_json["response"]
-            
-            # Handle OpenAI-style format (choices array)
             if "choices" in response_json and len(response_json["choices"]) > 0:
                 choice = response_json["choices"][0]
                 if "message" in choice and "content" in choice["message"]:
                     return choice["message"]["content"]
             
-            # Handle other possible formats
-            if "content" in response_json:
-                return response_json["content"]
-            
-            logger.warning(f"Unexpected response format: {response_json}")
+            logger.warning("Unexpected response format")
             return "Error: Could not extract response from API"
             
         except Exception as e:

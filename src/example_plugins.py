@@ -11,7 +11,39 @@ from .plugin_framework import (
     BaseAgentPlugin, AgentMetadata, AgentInput, AgentOutput,
     AgentCapability, ExecutionMode
 )
-from .llm_integration import get_llm_manager as get_agent_llm_manager, analyze_code_changes
+from .llm_client import LLMClient
+
+# Compatibility wrapper for the old get_llm_manager function
+def get_agent_llm_manager():
+    """Compatibility wrapper that returns an LLMClient instance"""
+    return LLMClient()
+
+def analyze_code_changes(changes, provider=None):
+    """Simplified code changes analysis using LLM client"""
+    llm_client = LLMClient()
+    prompt = f"""
+    You are an Agent doing analysis of the following code changes for risk assessment:
+    
+    Files changed: {changes.get('changed_files', [])}
+    Additions: {changes.get('additions', 0)}
+    Deletions: {changes.get('deletions', 0)}
+    Title: {changes.get('title', '')}
+    Description: {changes.get('body', '')}
+    
+    As an Agent, please provide:
+    1. Risk level (low/medium/high)
+    2. Affected modules
+    3. Potential security concerns
+    4. Deployment recommendations
+    
+    Return your analysis in a structured format.
+    """
+    
+    result = llm_client.call_llm(prompt)
+    if result.get('success'):
+        return {'content': result.get('response', '')}
+    else:
+        return {'content': 'Analysis failed'}
 
 class ChangeLogSummarizerPlugin(BaseAgentPlugin):
     """Enhanced Change Log Summarizer Agent Plugin"""

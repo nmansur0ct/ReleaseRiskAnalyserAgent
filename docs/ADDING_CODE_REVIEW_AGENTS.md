@@ -47,7 +47,7 @@ from .plugin_framework import (
     BaseAgentPlugin, AgentMetadata, AgentInput, AgentOutput,
     AgentCapability, ExecutionMode
 )
-from .llm_integration import get_llm_manager
+from .llm_client import LLMClient
 
 class PythonCodeReviewAgent(BaseAgentPlugin):
     """Python code quality and security review agent using LLM"""
@@ -871,7 +871,7 @@ Find the section with your imports (near the top):
 
 ```python
 from src.git_integration import GitHubProvider, get_github_provider
-from src.llm_integration import get_llm_manager
+from src.llm_client import LLMClient
 ```
 
 **Add these lines AFTER the existing imports:**

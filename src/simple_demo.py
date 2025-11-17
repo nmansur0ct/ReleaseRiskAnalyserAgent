@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
     from environment_config import get_env_config
-    from llm_integration import get_llm_manager
+    from llm_client import LLMClient
     from code_review_agents import (
         PythonCodeReviewAgent,
         JavaCodeReviewAgent,
