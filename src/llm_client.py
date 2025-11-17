@@ -58,13 +58,13 @@ class LLMClient:
     def __init__(self):
         """Initialize the LLM client with environment-based configuration."""
         # Try to use existing credential paths from .env
-        credentials_path = os.getenv("CREDENTIALS_PATH", "")
+        credentials_path = os.getenv("CREDENTIALS_PATH", "/Users/n0m08hp/RiskAgentAnalyzer")
         
         # Set up authentication paths - use existing env vars if available, otherwise try standard paths
         self.pem_file_path = os.getenv("CONSUMER_PEM_FILE_PATH")
         if not self.pem_file_path and credentials_path:
             # Try common PEM file names in credentials directory
-            for pem_name in ["consumer.pem", "private_key.pem", "client.pem"]:
+            for pem_name in ["private_key.pem"]:
                 potential_path = os.path.join(credentials_path, pem_name)
                 if os.path.exists(potential_path):
                     self.pem_file_path = potential_path
@@ -237,35 +237,44 @@ class LLMClient:
                 "Content-Type": "application/json"
             }
         
-        # Prepare request payload (matching standalone_llm_caller.py structure)
-        messages = []
-        if system_message:
-            messages.append({"role": "system", "content": system_message})
-        elif context:
-            system_msg = f"""You are a helpful assistant. Answer questions based on the provided context.
-            
-            Context: {context}
-
-            Answer the user's question based on this context. If the context doesn't contain the information needed, 
-            say "I don't have information about that in the provided context.\""""
-            messages.append({"role": "system", "content": system_msg})
-        
-        messages.append({"role": "user", "content": query})
-        
-        payload = {
-            "model": model_name,
-            "model-version": model_ver,
-            "api-version": api_ver,
-            "task": "chat/completions",
-            "model-params": {
-                "messages": messages,
+        # Prepare request payload - use simple format for Walmart LLM Gateway
+        if use_gateway_key:
+            # Use simple Walmart gateway format
+            payload = {
+                "model": model_name,
+                "prompt": query,
                 "max_tokens": max_tok,
-                "temperature": temp,
+                "temperature": temp
             }
-        }
-        
-        # Use gateway URL directly (not appending /chat/completions like standalone_llm_caller.py)
-        url = gw_url
+            url = f"{gw_url}/generate" if not gw_url.endswith('/generate') else gw_url
+        else:
+            # Use more complex format for PEM-based authentication
+            messages = []
+            if system_message:
+                messages.append({"role": "system", "content": system_message})
+            elif context:
+                system_msg = f"""You are a helpful assistant. Answer questions based on the provided context.
+                
+                Context: {context}
+
+                Answer the user's question based on this context. If the context doesn't contain the information needed, 
+                say "I don't have information about that in the provided context.\""""
+                messages.append({"role": "system", "content": system_msg})
+            
+            messages.append({"role": "user", "content": query})
+            
+            payload = {
+                "model": model_name,
+                "model-version": model_ver,
+                "api-version": api_ver,
+                "task": "chat/completions",
+                "model-params": {
+                    "messages": messages,
+                    "max_tokens": max_tok,
+                    "temperature": temp,
+                }
+            }
+            url = gw_url
         
         # Configure SSL verification (matching standalone_llm_caller.py pattern)
         if ssl_verify and ca_bundle:
@@ -289,10 +298,14 @@ class LLMClient:
             
             if response.status_code != 200:
                 logger.error(f"API request failed with status {response.status_code}")
+                logger.error(f"Request URL: {url}")
+                logger.error(f"Request payload: {payload}")
                 try:
                     error_detail = response.json()
+                    logger.error(f"Error response: {error_detail}")
                 except:
                     error_detail = response.text
+                    logger.error(f"Error response (raw): {error_detail}")
                 return {
                     "success": False,
                     "error": f"HTTP {response.status_code}",
@@ -350,12 +363,21 @@ class LLMClient:
     def _extract_response_text(self, response_json: Dict[str, Any]) -> str:
         """Extract response text from API response."""
         try:
+            # Handle Walmart LLM Gateway format (simple response field)
+            if "response" in response_json:
+                return response_json["response"]
+            
+            # Handle OpenAI-style format (choices array)
             if "choices" in response_json and len(response_json["choices"]) > 0:
                 choice = response_json["choices"][0]
                 if "message" in choice and "content" in choice["message"]:
                     return choice["message"]["content"]
             
-            logger.warning("Unexpected response format")
+            # Handle other possible formats
+            if "content" in response_json:
+                return response_json["content"]
+            
+            logger.warning(f"Unexpected response format: {response_json}")
             return "Error: Could not extract response from API"
             
         except Exception as e:
