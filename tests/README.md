@@ -69,6 +69,16 @@ python -m unittest tests.test_base_code_agent.TestBaseCodeReviewAgent.test_get_m
 - **Error handling**: Tests graceful failure recovery
 - **Integration workflow**: Tests complete code review process
 
+### 3. Integration Tests (`test_integration.py`) - **NEW**
+- **Full analysis workflow**: End-to-end single repository analysis
+- **Multi-repository analysis**: Parallel processing of multiple repos
+- **Multi-language code review**: Python, Java, JavaScript, React integration
+- **Report generation**: Complete report creation and validation
+- **Error handling**: LLM failure recovery and Git API error handling
+- **Performance testing**: Parallel agent execution measurement
+
+See `INTEGRATION_TESTING.md` for detailed documentation.
+
 **Key Test Scenarios:**
 - Multiple repository URL formats
 - Default branch handling
