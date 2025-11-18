@@ -49,12 +49,43 @@ class CodeReviewOrchestrator:
             'cosmosdb_agent': CosmosDBReviewAgent()
         }
     
+    def _extract_repository_info(self, pr_data: Dict[str, Any]) -> tuple[str, str]:
+        """Extract repository URL and branch from PR data"""
+        repo_url = None
+        branch = None
+        
+        # Try multiple ways to get repository URL
+        if 'repository_url' in pr_data:
+            repo_url = pr_data['repository_url']
+        elif 'base' in pr_data and isinstance(pr_data['base'], dict):
+            if 'repo' in pr_data['base'] and isinstance(pr_data['base']['repo'], dict):
+                repo_url = pr_data['base']['repo'].get('clone_url') or pr_data['base']['repo'].get('html_url')
+            branch = pr_data['base'].get('ref', 'main')
+        
+        if not repo_url and 'html_url' in pr_data:
+            # Extract repo URL from PR URL
+            pr_url = pr_data['html_url']
+            if '/pull/' in pr_url:
+                repo_url = pr_url.split('/pull/')[0]
+            elif '/pulls/' in pr_url:
+                repo_url = pr_url.split('/pulls/')[0]
+                
+        if not branch:
+            branch = 'main'  # Default branch
+            
+        return repo_url, branch
 
     async def execute_code_review(self, pr_data: Dict[str, Any], session_id: str) -> Dict[str, CodeReviewResult]:
         """Execute code review agents on PR data"""
         
         # Check configuration to determine review mode
         code_review_mode = self.config.get('code_review_mode', 'pr_only').lower()
+        
+        # Validate code review mode
+        valid_modes = ['pr_only', 'full_repo']
+        if code_review_mode not in valid_modes:
+            self.logger.warning(f"Invalid code_review_mode '{code_review_mode}'. Valid options: {valid_modes}. Defaulting to 'pr_only'.")
+            code_review_mode = 'pr_only'
         
         if code_review_mode == 'full_repo':
             print("  Full repository code review mode enabled...")
@@ -63,28 +94,8 @@ class CodeReviewOrchestrator:
                 from ..integration.git_integration import get_git_manager
                 git_manager = get_git_manager()
                 
-                # Extract repository information from PR data
-                repo_url = None
-                branch = None
-                
-                # Try multiple ways to get repository URL
-                if 'repository_url' in pr_data:
-                    repo_url = pr_data['repository_url']
-                elif 'base' in pr_data and isinstance(pr_data['base'], dict):
-                    if 'repo' in pr_data['base'] and isinstance(pr_data['base']['repo'], dict):
-                        repo_url = pr_data['base']['repo'].get('clone_url') or pr_data['base']['repo'].get('html_url')
-                    branch = pr_data['base'].get('ref', 'main')
-            
-                if not repo_url and 'html_url' in pr_data:
-                    # Extract repo URL from PR URL
-                    pr_url = pr_data['html_url']
-                    if '/pull/' in pr_url:
-                        repo_url = pr_url.split('/pull/')[0]
-                    elif '/pulls/' in pr_url:
-                        repo_url = pr_url.split('/pulls/')[0]
-                        
-                if not branch:
-                    branch = 'main'  # Default branch
+                # Extract repository information using helper method
+                repo_url, branch = self._extract_repository_info(pr_data)
                 
                 if repo_url:
                     self.logger.info(f"Fetching repository files from: {repo_url} (branch: {branch})")
@@ -92,7 +103,6 @@ class CodeReviewOrchestrator:
                     # Define file extensions for code review
                     file_extensions = ['.py', '.js', '.ts', '.java', '.cpp', '.c', '.cs', '.php', '.rb', '.go', '.rs', '.sql', '.json', '.yaml', '.yml']
                     
-
                     # Fetch repository files
                     repository_files = await git_manager.fetch_repository_files(repo_url, branch, file_extensions)
                     self.logger.info(f"Fetched {len(repository_files)} repository files for full code review")
@@ -105,15 +115,13 @@ class CodeReviewOrchestrator:
                 else:
                     self.logger.warning("Could not extract repository URL from PR data for file fetching")
                     print("  Warning: Could not extract repository URL - using PR files only")
-                
+                    
             except Exception as e:
                 self.logger.error(f"Failed to fetch repository files: {e}")
                 print(f"  Warning: Could not fetch repository files for comprehensive review: {e}")
-        else:
+        else:  # pr_only mode
             print("  PR-only code review mode enabled...")
-            print(f"  Analyzing only PR-modified files: {len(pr_data.get('files', []))} files")
-        
-        # Execute agents
+            print(f"  Analyzing only PR-modified files: {len(pr_data.get('files', []))} files")        # Execute agents
         print("  Executing code review agents...")
         
 
