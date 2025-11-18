@@ -1,0 +1,156 @@
+====================================================================================================
+TEST EXECUTION REPORT
+====================================================================================================
+
+SUMMARY
+----------------------------------------------------------------------------------------------------
+Generated: 2025-11-18 19:23:32
+Total Scenarios: 2
+Total Test Cases: 7
+✓ Passed: 7 (100.0%)
+✗ Failed: 0
+⚠ Errors: 0
+⊘ Skipped: 0
+
+====================================================================================================
+SCENARIO: TestReportGenerationExample
+====================================================================================================
+Scenario ID: SCN-001
+Category: Unit Tests
+Description: Example test class with enhanced metadata for reporting
+
+----------------------------------------------------------------------------------------------------
+TEST CASE: test_agent_findings_formatting
+----------------------------------------------------------------------------------------------------
+Case ID: TC-001
+Method: test_agent_findings_formatting
+Status: PASSED
+Execution Time: 0.000s
+Timestamp: 2025-11-18 19:23:32
+
+Description:
+Test formatting of agent findings into table
+
+Expected Result:
+Test should pass without errors
+
+Actual Result:
+Test passed successfully
+
+----------------------------------------------------------------------------------------------------
+TEST CASE: test_empty_findings_handling
+----------------------------------------------------------------------------------------------------
+Case ID: TC-002
+Method: test_empty_findings_handling
+Status: PASSED
+Execution Time: 0.000s
+Timestamp: 2025-11-18 19:23:32
+
+Description:
+Test handling of empty findings
+
+Expected Result:
+Test should pass without errors
+
+Actual Result:
+Test passed successfully
+
+----------------------------------------------------------------------------------------------------
+TEST CASE: test_json_response_parsing
+----------------------------------------------------------------------------------------------------
+Case ID: TC-003
+Method: test_json_response_parsing
+Status: PASSED
+Execution Time: 0.000s
+Timestamp: 2025-11-18 19:23:32
+
+Description:
+Test parsing JSON agent response with performance constraint
+
+Expected Result:
+Test should pass without errors
+
+Actual Result:
+Test passed successfully
+
+----------------------------------------------------------------------------------------------------
+TEST CASE: test_report_header_generation
+----------------------------------------------------------------------------------------------------
+Case ID: TC-004
+Method: test_report_header_generation
+Status: PASSED
+Execution Time: 0.000s
+Timestamp: 2025-11-18 19:23:32
+
+Description:
+Test basic report header generation
+
+Expected Result:
+Test should pass without errors
+
+Actual Result:
+Test passed successfully
+
+----------------------------------------------------------------------------------------------------
+TEST CASE: test_summary_statistics_calculation
+----------------------------------------------------------------------------------------------------
+Case ID: TC-005
+Method: test_summary_statistics_calculation
+Status: PASSED
+Execution Time: 0.000s
+Timestamp: 2025-11-18 19:23:32
+
+Description:
+Test calculation of summary statistics
+
+Expected Result:
+Test should pass without errors
+
+Actual Result:
+Test passed successfully
+
+
+====================================================================================================
+SCENARIO: TestRepositoryAnalysisExample
+====================================================================================================
+Scenario ID: SCN-002
+Category: Unit Tests
+Description: Example integration test class
+
+----------------------------------------------------------------------------------------------------
+TEST CASE: test_multi_language_review
+----------------------------------------------------------------------------------------------------
+Case ID: TC-001
+Method: test_multi_language_review
+Status: PASSED
+Execution Time: 0.000s
+Timestamp: 2025-11-18 19:23:32
+
+Description:
+Test multi-language code review integration
+
+Expected Result:
+Test should pass without errors
+
+Actual Result:
+Test passed successfully
+
+----------------------------------------------------------------------------------------------------
+TEST CASE: test_single_repo_workflow
+----------------------------------------------------------------------------------------------------
+Case ID: TC-002
+Method: test_single_repo_workflow
+Status: PASSED
+Execution Time: 0.000s
+Timestamp: 2025-11-18 19:23:32
+
+Description:
+Test complete single repository analysis
+
+Expected Result:
+Test should pass without errors
+
+Actual Result:
+Test passed successfully
+
+

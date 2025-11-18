@@ -1,0 +1,121 @@
+{
+  "generated_at": "2025-11-18T19:23:32.927861",
+  "summary": {
+    "total_scenarios": 2,
+    "total_cases": 7,
+    "passed": 7,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "pass_rate": 100.0
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SCN-001",
+      "name": "TestReportGenerationExample",
+      "description": "Example test class with enhanced metadata for reporting",
+      "category": "Unit Tests",
+      "test_cases": [
+        {
+          "case_id": "TC-001",
+          "name": "test_agent_findings_formatting",
+          "description": "Test formatting of agent findings into table",
+          "test_method": "test_agent_findings_formatting",
+          "expected_result": "Test should pass without errors",
+          "actual_result": "Test passed successfully",
+          "status": "PASSED",
+          "execution_time": 3.409385681152344e-05,
+          "timestamp": "2025-11-18 19:23:32",
+          "error_message": "",
+          "traceback": ""
+        },
+        {
+          "case_id": "TC-002",
+          "name": "test_empty_findings_handling",
+          "description": "Test handling of empty findings",
+          "test_method": "test_empty_findings_handling",
+          "expected_result": "Test should pass without errors",
+          "actual_result": "Test passed successfully",
+          "status": "PASSED",
+          "execution_time": 1.5974044799804688e-05,
+          "timestamp": "2025-11-18 19:23:32",
+          "error_message": "",
+          "traceback": ""
+        },
+        {
+          "case_id": "TC-003",
+          "name": "test_json_response_parsing",
+          "description": "Test parsing JSON agent response with performance constraint",
+          "test_method": "test_json_response_parsing",
+          "expected_result": "Test should pass without errors",
+          "actual_result": "Test passed successfully",
+          "status": "PASSED",
+          "execution_time": 2.1219253540039062e-05,
+          "timestamp": "2025-11-18 19:23:32",
+          "error_message": "",
+          "traceback": ""
+        },
+        {
+          "case_id": "TC-004",
+          "name": "test_report_header_generation",
+          "description": "Test basic report header generation",
+          "test_method": "test_report_header_generation",
+          "expected_result": "Test should pass without errors",
+          "actual_result": "Test passed successfully",
+          "status": "PASSED",
+          "execution_time": 6.9141387939453125e-06,
+          "timestamp": "2025-11-18 19:23:32",
+          "error_message": "",
+          "traceback": ""
+        },
+        {
+          "case_id": "TC-005",
+          "name": "test_summary_statistics_calculation",
+          "description": "Test calculation of summary statistics",
+          "test_method": "test_summary_statistics_calculation",
+          "expected_result": "Test should pass without errors",
+          "actual_result": "Test passed successfully",
+          "status": "PASSED",
+          "execution_time": 7.867813110351562e-06,
+          "timestamp": "2025-11-18 19:23:32",
+          "error_message": "",
+          "traceback": ""
+        }
+      ]
+    },
+    {
+      "scenario_id": "SCN-002",
+      "name": "TestRepositoryAnalysisExample",
+      "description": "Example integration test class",
+      "category": "Unit Tests",
+      "test_cases": [
+        {
+          "case_id": "TC-001",
+          "name": "test_multi_language_review",
+          "description": "Test multi-language code review integration",
+          "test_method": "test_multi_language_review",
+          "expected_result": "Test should pass without errors",
+          "actual_result": "Test passed successfully",
+          "status": "PASSED",
+          "execution_time": 9.059906005859375e-06,
+          "timestamp": "2025-11-18 19:23:32",
+          "error_message": "",
+          "traceback": ""
+        },
+        {
+          "case_id": "TC-002",
+          "name": "test_single_repo_workflow",
+          "description": "Test complete single repository analysis",
+          "test_method": "test_single_repo_workflow",
+          "expected_result": "Test should pass without errors",
+          "actual_result": "Test passed successfully",
+          "status": "PASSED",
+          "execution_time": 9.059906005859375e-06,
+          "timestamp": "2025-11-18 19:23:32",
+          "error_message": "",
+          "traceback": ""
+        }
+      ]
+    }
+  ]
+}
