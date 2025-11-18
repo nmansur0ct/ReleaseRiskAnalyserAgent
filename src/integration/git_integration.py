@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import logging
 
 try:
-    from environment_config import get_env_config
+    from .environment_config import get_env_config
 except ImportError:
     # Fallback for standalone execution
     import os

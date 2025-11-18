@@ -104,3 +104,4 @@ logs/
 cache/
 temp/
 tmp/
+*.pem

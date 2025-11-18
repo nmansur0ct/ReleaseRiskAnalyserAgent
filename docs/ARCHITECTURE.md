@@ -2,83 +2,526 @@
 
 ## Executive Summary
 
-The Risk Agent Analyzer is an enterprise-grade CI/CD governance platform that provides automated release readiness assessment through multi-agent orchestration. The system leverages LLM-powered analysis agents, policy validation frameworks, and pluggable architecture to deliver comprehensive risk evaluation for software releases.
+The Risk Agent Analyzer is a professional-grade multi-repository analysis framework that provides comprehensive code review and risk assessment through specialized agents. The system has evolved from a monolithic structure into a clean, modular architecture supporting enterprise-scale analysis with LLM integration and comprehensive reporting.
 
 ### Key Capabilities
-- Automated pull request risk assessment
-- Multi-agent workflow orchestration using LangGraph
-- Extensible plugin framework for custom analysis
-- Policy-driven governance enforcement
-- Code quality and security analysis
-- Real-time decision support with explainable AI
+- Multi-repository analysis with parallel processing
+- Modular agent system for different technologies (Python, Java, JavaScript, SQL)
+- Enterprise LLM integration (Walmart LLM Gateway)
+- Comprehensive reporting with Good/OK/Bad classification
+- GitHub Enterprise support
+- Configurable analysis modes (full repository vs PR-only)
+- Professional package structure for maintainability
 
 ---
 
-## 1. High-Level System Architecture
+## 1. Current Modular Architecture
+
+### 1.1 Package Structure
+
+```
+RiskAgentAnalyzer/
+├── risk_analyzer.py           # Main executable entry point
+├── setup.py                  # Package configuration
+├── requirements.txt          # Dependencies
+├── .env                      # Environment configuration
+└── src/                      # Core package modules
+    ├── agents/               # Code review agents
+    │   ├── __init__.py
+    │   └── code_review_agents.py
+    ├── analysis/             # Analysis orchestration
+    │   ├── __init__.py
+    │   ├── code_review_orchestrator.py
+    │   ├── pr_analyzer.py
+    │   └── risk_assessor.py
+    ├── integration/          # External integrations
+    │   ├── __init__.py
+    │   ├── llm_client.py
+    │   ├── git_integration.py
+    │   └── environment_config.py
+    ├── orchestration/        # Workflow management
+    │   ├── __init__.py
+    │   ├── repository_orchestrator.py
+    │   └── workflow_manager.py
+    ├── reporting/            # Report generation
+    │   ├── __init__.py
+    │   ├── comprehensive_reporter.py
+    │   ├── summary_generator.py
+    │   └── report_formatter.py
+    └── utilities/            # Common utilities
+        ├── __init__.py
+        ├── data_structures.py
+        ├── formatting_utils.py
+        └── config_utils.py
+```
+
+### 1.2 Architectural Layers
 
 ```mermaid
 flowchart TD
-    subgraph "Frontend Layer"
-        WUI[Web Interface]
-        API[API Gateway]
+    subgraph "Entry Point Layer"
+        MAIN[risk_analyzer.py]
     end
     
-    subgraph "Orchestration Layer"
-        WFE[Workflow Engine]
-        SM[State Manager]
-        PR[Plugin Registry]
+    subgraph "Core Framework"
+        subgraph "Orchestration"
+            RO[RepositoryOrchestrator]
+            WM[WorkflowManager]
+        end
+        
+        subgraph "Analysis Engine"
+            CRO[CodeReviewOrchestrator]
+            PRA[PRAnalyzer] 
+            RA[RiskAssessor]
+        end
+        
+        subgraph "Agent System"
+            PY[PythonAgent]
+            JAVA[JavaAgent]
+            JS[JavaScriptAgent]
+            SQL[SQLAgents]
+        end
     end
     
-    subgraph "Agent Layer"
-        IV[Input Validator]
-        CA[Change Analyzer]
-        PE[Policy Evaluator]
-        RA[Risk Assessor]
-        DE[Decision Engine]
-        QA[Quality Assurance]
-        CR[Code Reviewer]
+    subgraph "Integration Layer"
+        LLM[LLMClient]
+        GIT[GitIntegration]
+        ENV[EnvironmentConfig]
     end
     
-    subgraph "Data Layer"
-        CS[(Configuration Store)]
-        AC[(Analysis Cache)]
-        AL[(Audit Log)]
+    subgraph "Reporting Layer"
+        CR[ComprehensiveReporter]
+        SG[SummaryGenerator]
+        RF[ReportFormatter]
     end
     
     subgraph "External Services"
-        GP{{Git Provider}}
-        LLM{{LLM Service}}
-        NS{{Notification Service}}
+        WLLM{{Walmart LLM Gateway}}
+        GH{{GitHub Enterprise}}
+        GL{{GitLab}}
+    end
+
+    MAIN --> RO
+    RO --> CRO
+    RO --> PRA
+    CRO --> PY
+    CRO --> JAVA
+    CRO --> JS
+    CRO --> SQL
+    PRA --> RA
+    RO --> CR
+    CR --> SG
+    CR --> RF
+    LLM --> WLLM
+    GIT --> GH
+    GIT --> GL
+```
+
+## 2. Component Details
+
+### 2.1 Package Responsibilities
+
+#### `src/agents/` - Code Review Agent System
+- **Purpose**: Specialized analysis agents for different technologies
+- **Key Components**:
+  - `PythonCodeReviewAgent`: Python code quality, security, complexity analysis
+  - `JavaCodeReviewAgent`: Java enterprise patterns and security
+  - `JavaScriptCodeReviewAgent`: Modern JS practices and vulnerabilities
+  - `ReactJSCodeReviewAgent`: Component architecture and performance
+  - Database agents: BigQuery, Azure SQL, PostgreSQL, Cosmos DB
+- **Design**: Simplified base classes replacing complex plugin framework
+- **LLM Integration**: Direct integration with LLM client for analysis
+
+#### `src/analysis/` - Analysis Orchestration
+- **Purpose**: Coordinates analysis workflow and agent execution
+- **Key Components**:
+  - `CodeReviewOrchestrator`: Manages parallel agent execution
+  - `PRAnalyzer`: Pull request specific analysis logic
+  - `RiskAssessor`: Risk scoring and classification algorithms
+- **Features**: Supports both full repository and PR-only analysis modes
+- **Parallelization**: Asyncio-based concurrent agent execution
+
+#### `src/integration/` - External System Integration
+- **Purpose**: Manages all external service connections
+- **Key Components**:
+  - `LLMClient`: Walmart LLM Gateway integration with authentication
+  - `GitIntegration`: GitHub Enterprise and standard Git operations
+  - `EnvironmentConfig`: Configuration management and validation
+- **Security**: Proper credential handling and API authentication
+- **Extensibility**: Plugin architecture for additional providers
+
+#### `src/orchestration/` - Workflow Management
+- **Purpose**: High-level workflow coordination and repository management
+- **Key Components**:
+  - `RepositoryOrchestrator`: Multi-repository analysis coordination
+  - `WorkflowManager`: Analysis workflow execution and tracking
+- **Features**: Progress tracking, error handling, resource management
+- **Scalability**: Designed for enterprise-scale multi-repository analysis
+
+#### `src/reporting/` - Report Generation
+- **Purpose**: Comprehensive report creation with professional formatting
+- **Key Components**:
+  - `ComprehensiveReporter`: 5-section detailed reports
+  - `SummaryGenerator`: AI-powered executive summaries
+  - `ReportFormatter`: Professional formatting and classification
+- **Features**: Good/OK/Bad classification, risk metrics, actionable insights
+- **Output**: Timestamped reports with detailed technical findings
+
+#### `src/utilities/` - Common Infrastructure
+- **Purpose**: Shared data structures and utility functions
+- **Key Components**:
+  - `DataStructures`: Type-safe classes for analysis results
+  - `FormattingUtils`: Professional output formatting functions
+  - `ConfigUtils`: Configuration loading and validation
+- **Design**: Type hints, enums, professional error handling
+- **Maintainability**: Centralized common functionality
+
+### 2.2 Data Flow Architecture
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant RiskAnalyzer
+    participant RepoOrchestrator
+    participant CodeReviewOrchestrator
+    participant Agents
+    participant LLMClient
+    participant GitIntegration
+    participant Reporter
+
+    User->>RiskAnalyzer: python risk_analyzer.py repos...
+    RiskAnalyzer->>RepoOrchestrator: analyze_repositories()
+    
+    loop For each repository
+        RepoOrchestrator->>GitIntegration: fetch_recent_prs()
+        GitIntegration-->>RepoOrchestrator: PR data
+        RepoOrchestrator->>CodeReviewOrchestrator: execute_code_review()
+        
+        par Parallel Agent Execution
+            CodeReviewOrchestrator->>Agents: Python analysis
+            CodeReviewOrchestrator->>Agents: Java analysis  
+            CodeReviewOrchestrator->>Agents: JavaScript analysis
+            CodeReviewOrchestrator->>Agents: SQL analysis
+        end
+        
+        Agents->>LLMClient: analyze code
+        LLMClient-->>Agents: analysis results
+        Agents-->>CodeReviewOrchestrator: findings
+        
+        CodeReviewOrchestrator-->>RepoOrchestrator: aggregated results
     end
     
-    %% Frontend connections
-    WUI --> API
-    API --> WFE
+    RepoOrchestrator->>Reporter: generate_comprehensive_report()
+    Reporter->>LLMClient: generate AI summary
+    LLMClient-->>Reporter: summary
+    Reporter-->>User: timestamped report file
+```
+
+## 3. Alternative Architecture Proposals
+
+### 3.1 Microservices Architecture
+
+**Current State**: Monolithic modular application
+**Proposal**: Decompose into containerized microservices
+
+```mermaid
+flowchart TD
+    subgraph "API Gateway"
+        GW[Kong/Istio Gateway]
+    end
     
-    %% Orchestration connections
-    WFE --> SM
-    WFE --> PR
+    subgraph "Core Services"
+        AS[Analysis Service]
+        RS[Report Service]
+        CS[Config Service]
+    end
     
-    %% Agent workflow connections
-    SM --> IV
-    IV --> CA
-    CA --> PE
-    PE --> RA
-    RA --> DE
-    DE --> QA
-    QA --> CR
+    subgraph "Agent Services"
+        PYS[Python Agent Service]
+        JAS[Java Agent Service]
+        JSS[JavaScript Agent Service]
+        SQS[SQL Agent Service]
+    end
     
-    %% Data layer connections
-    WFE --> CS
-    CA --> AC
-    DE --> AL
+    subgraph "Integration Services"
+        LLS[LLM Service]
+        GIS[Git Service]
+    end
     
-    %% External service connections
-    CA --> GP
-    PE --> LLM
-    RA --> LLM
-    DE --> NS
-    CR --> LLM
+    subgraph "Data Layer"
+        PG[(PostgreSQL)]
+        RD[(Redis Cache)]
+        S3[(Object Storage)]
+    end
+
+    GW --> AS
+    AS --> PYS
+    AS --> JAS
+    AS --> JSS
+    AS --> SQS
+    AS --> RS
+    AS --> LLS
+    AS --> GIS
+    CS --> PG
+    RS --> S3
+    LLS --> RD
+```
+
+**Benefits**:
+- Independent scaling of agent services
+- Technology diversity (different languages per service)
+- Fault isolation and resilience
+- Independent deployment cycles
+
+**Drawbacks**:
+- Increased operational complexity
+- Network latency between services
+- Distributed system challenges
+- Higher infrastructure costs
+
+### 3.2 Event-Driven Architecture
+
+**Current State**: Synchronous orchestration
+**Proposal**: Asynchronous event-driven workflow
+
+```mermaid
+flowchart TD
+    subgraph "Event Backbone"
+        EB[Apache Kafka/Azure Service Bus]
+    end
+    
+    subgraph "Producers"
+        RP[Repository Processor]
+        AP[Analysis Processor]
+    end
+    
+    subgraph "Consumers"
+        AG[Agent Workers]
+        RG[Report Generator]
+        NS[Notification Service]
+    end
+    
+    subgraph "Event Types"
+        RE[repository.submitted]
+        AE[analysis.requested]
+        AC[analysis.completed]
+        RC[report.generated]
+    end
+
+    RP --> RE
+    RE --> EB
+    EB --> AE
+    AE --> AG
+    AG --> AC
+    AC --> EB
+    EB --> RC
+    RC --> RG
+    RG --> NS
+```
+
+**Benefits**:
+- Better scalability and throughput
+- Loose coupling between components
+- Natural support for parallel processing
+- Audit trail through event log
+
+**Drawbacks**:
+- Eventual consistency challenges
+- Complex debugging and monitoring
+- Event schema evolution complexity
+- Additional infrastructure dependencies
+
+### 3.3 Plugin-Based Architecture
+
+**Current State**: Fixed agent set in packages
+**Proposal**: Dynamic plugin loading system
+
+```mermaid
+flowchart TD
+    subgraph "Plugin Manager"
+        PM[Plugin Registry]
+        PL[Plugin Loader]
+        PI[Plugin Interface]
+    end
+    
+    subgraph "Core Engine"
+        CE[Analysis Engine]
+        OE[Orchestration Engine]
+    end
+    
+    subgraph "Plugin Store"
+        BP[Built-in Plugins]
+        CP[Custom Plugins]
+        TP[Third-party Plugins]
+    end
+    
+    subgraph "Plugin Types"
+        CA[Code Analysis]
+        RA[Risk Assessment]
+        RF[Report Formatting]
+        IN[Integrations]
+    end
+
+    PM --> PL
+    PL --> PI
+    CE --> PM
+    OE --> PM
+    PM --> BP
+    PM --> CP
+    PM --> TP
+    PI --> CA
+    PI --> RA
+    PI --> RF
+    PI --> IN
+```
+
+**Benefits**:
+- Extensibility without core changes
+- Community-driven plugin ecosystem
+- Dynamic capability addition
+- Version management per plugin
+
+**Drawbacks**:
+- Plugin compatibility management
+- Security and sandboxing challenges
+- Performance overhead
+- Complex dependency resolution
+
+### 3.4 Serverless Architecture
+
+**Current State**: Long-running Python application
+**Proposal**: Function-based serverless deployment
+
+```mermaid
+flowchart TD
+    subgraph "API Layer"
+        AG[API Gateway]
+    end
+    
+    subgraph "Function Layer"
+        RF[Repository Function]
+        AF[Analysis Functions]
+        REF[Report Function]
+    end
+    
+    subgraph "Agent Functions"
+        PYF[Python Analyzer]
+        JAF[Java Analyzer]
+        JSF[JavaScript Analyzer]
+        SQF[SQL Analyzer]
+    end
+    
+    subgraph "Storage"
+        DB[(Managed Database)]
+        FS[(File Storage)]
+        QU[(Queue Service)]
+    end
+
+    AG --> RF
+    RF --> QU
+    QU --> AF
+    AF --> PYF
+    AF --> JAF
+    AF --> JSF
+    AF --> SQF
+    AF --> REF
+    REF --> FS
+    DB --> RF
+    DB --> REF
+```
+
+**Benefits**:
+- Zero server management overhead
+- Automatic scaling based on demand
+- Cost efficiency (pay per execution)
+- High availability and fault tolerance
+
+**Drawbacks**:
+- Cold start latency issues
+- Function timeout limitations
+- Vendor lock-in concerns
+- Limited control over execution environment
+
+## 4. Recommended Evolution Path
+
+### Phase 1: Current Modular Optimization (Immediate)
+- ✅ **Completed**: Clean modular package structure
+- **Next**: Performance optimization and caching
+- **Next**: Enhanced error handling and logging
+- **Next**: Comprehensive test suite implementation
+
+### Phase 2: Enhanced Integration (3-6 months)
+- **Plugin System**: Implement dynamic agent loading
+- **Caching Layer**: Redis/SQLite for analysis results
+- **Database Support**: Persistent storage for large-scale analysis
+- **API Layer**: REST API for programmatic access
+
+### Phase 3: Scale Preparation (6-12 months)
+- **Containerization**: Docker deployment support
+- **Kubernetes**: Orchestrated deployment option
+- **Event Streaming**: Kafka integration for high-volume processing
+- **Monitoring**: Comprehensive observability stack
+
+### Phase 4: Enterprise Features (12+ months)
+- **Multi-tenancy**: Organization-based isolation
+- **Advanced Analytics**: Trend analysis and ML insights
+- **Integration Hub**: Multiple LLM providers and VCS systems
+- **Governance Dashboard**: Management interface for policies
+
+## 5. Implementation Recommendations
+
+### 5.1 Immediate Priorities
+1. **Performance Optimization**: Implement caching for repeated analyses
+2. **Error Resilience**: Enhanced error handling and retry mechanisms  
+3. **Configuration Management**: Centralized configuration validation
+4. **Testing Strategy**: Unit and integration test coverage
+5. **Documentation**: API documentation and developer guides
+
+### 5.2 Architecture Decision Records (ADRs)
+
+#### ADR-001: Modular Package Structure
+- **Decision**: Adopt package-based modular architecture
+- **Rationale**: Maintainability, testability, clear separation of concerns
+- **Status**: ✅ Implemented
+
+#### ADR-002: Synchronous Orchestration
+- **Decision**: Use asyncio for concurrent agent execution within synchronous workflow
+- **Rationale**: Simplicity, deterministic execution, easier debugging
+- **Status**: ✅ Implemented
+- **Future**: Consider event-driven for scale requirements
+
+#### ADR-003: Simplified Agent Framework
+- **Decision**: Replace complex plugin framework with simple base classes
+- **Rationale**: Reduced complexity, easier maintenance, better performance
+- **Status**: ✅ Implemented
+
+#### ADR-004: Direct LLM Integration
+- **Decision**: Direct integration with Walmart LLM Gateway
+- **Rationale**: Enterprise requirements, authentication, performance
+- **Status**: ✅ Implemented
+- **Future**: Add multi-provider support for flexibility
+
+### 5.3 Quality Metrics
+
+```yaml
+Code Quality Targets:
+  Test Coverage: ">= 80%"
+  Cyclomatic Complexity: "<= 10 per function"
+  Type Coverage: ">= 90%"
+  Documentation: "All public APIs documented"
+
+Performance Targets:
+  Single Repository Analysis: "< 2 minutes"
+  Multi-Repository (10 repos): "< 15 minutes"
+  Memory Usage: "< 1GB per analysis"
+  Concurrent Agents: "8+ agents in parallel"
+
+Reliability Targets:
+  Uptime: ">= 99.5%"
+  Error Rate: "< 0.1%"
+  Recovery Time: "< 30 seconds"
+  Data Consistency: "100%"
+```
     
     %% Styling
     classDef frontend fill:#e3f2fd

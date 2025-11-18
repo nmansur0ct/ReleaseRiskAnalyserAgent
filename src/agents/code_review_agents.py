@@ -8,11 +8,57 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from plugin_framework import (
-    BaseAgentPlugin, AgentMetadata, AgentInput, AgentOutput,
-    AgentCapability, ExecutionMode
-)
-from llm_client import LLMClient
+from ..integration.llm_client import LLMClient
+
+# Simplified base classes to replace plugin framework
+class AgentMetadata:
+    def __init__(self, name, version, description, author, capabilities, dependencies, execution_priority, execution_mode, parallel_compatible):
+        self.name = name
+        self.version = version
+        self.description = description
+        self.author = author
+        self.capabilities = capabilities
+        self.dependencies = dependencies
+        self.execution_priority = execution_priority
+        self.execution_mode = execution_mode
+        self.parallel_compatible = parallel_compatible
+
+class AgentInput:
+    def __init__(self, data, session_id=None):
+        self.data = data
+        self.session_id = session_id or "default_session"
+
+class AgentOutput:
+    def __init__(self, result=None, metadata=None, session_id=None, analysis_method=None, 
+                 data=None, confidence=None, execution_time=None, errors=None, **kwargs):
+        # Support both old and new interfaces
+        self.data = data or result or {}
+        self.result = result or {}
+        self.metadata = metadata or {}
+        self.session_id = session_id or "default_session"
+        self.analysis_method = analysis_method or "llm"
+        self.confidence = confidence or 0.8
+        self.execution_time = execution_time or 0.0
+        self.errors = errors or []
+        
+        # Store any additional kwargs
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+class AgentCapability:
+    ANALYSIS = "analysis"
+    SECURITY = "security"
+
+class ExecutionMode:
+    PARALLEL = "parallel"
+    SEQUENTIAL = "sequential"
+
+class BaseAgentPlugin:
+    def get_metadata(self):
+        raise NotImplementedError
+    
+    def execute(self, input_data):
+        raise NotImplementedError
 
 class PythonCodeReviewAgent(BaseAgentPlugin):
     """Python code quality and security review agent using LLM"""
@@ -36,9 +82,10 @@ class PythonCodeReviewAgent(BaseAgentPlugin):
         """Main processing method"""
         start_time = datetime.now()
         
+
         try:
             pr_data = input_data.data
-            changed_files = pr_data.get('changed_files', [])
+            changed_files = pr_data.get('files', [])  # Fixed: use 'files' instead of 'changed_files'
             
             # Filter Python files - handle both string filenames and file dictionaries
             python_files = []
@@ -63,12 +110,14 @@ class PythonCodeReviewAgent(BaseAgentPlugin):
             file_analyses = []
             for file_info in python_files:
                 try:
+
                     if isinstance(file_info, str):
                         file_path = file_info
-                        file_content = self._get_file_content(file_path, pr_data)
                     else:  # Dictionary with file info
                         file_path = file_info.get('filename', '')
-                        file_content = file_info.get('full_content') or file_info.get('patch', '')
+                    
+                    # Always use _get_file_content for consistency
+                    file_content = self._get_file_content(file_path, pr_data)
                         
                     if file_content:
                         analysis = await self._analyze_with_llm(file_content, file_path)
@@ -76,7 +125,7 @@ class PythonCodeReviewAgent(BaseAgentPlugin):
                         file_analyses.append(analysis)
                 except Exception as e:
                     continue
-            
+                    
             # Aggregate results
             total_issues = sum(len(f.get('issues', [])) for f in file_analyses)
             critical_count = sum(f.get('critical_count', 0) for f in file_analyses)
@@ -113,6 +162,7 @@ class PythonCodeReviewAgent(BaseAgentPlugin):
     
     def _get_file_content(self, file_path: str, pr_data: Dict[str, Any]) -> str:
         """Extract file content from PR data"""
+
         file_contents = pr_data.get('file_contents', {})
         if file_path in file_contents:
             return file_contents[file_path]
@@ -121,7 +171,8 @@ class PythonCodeReviewAgent(BaseAgentPlugin):
         files = pr_data.get('files', [])
         for file_info in files:
             if file_info.get('filename') == file_path:
-                return file_info.get('patch', '') or file_info.get('content', '')
+                # Try full_content first (for repository files), then patch (for PR files)
+                return file_info.get('full_content', '') or file_info.get('patch', '') or file_info.get('content', '')
         
         return ""
     
@@ -248,13 +299,15 @@ class JavaCodeReviewAgent(BaseAgentPlugin):
             optional_config={}
         )
     
+
     async def process(self, input_data: AgentInput, state) -> AgentOutput:
         """Main processing method"""
         start_time = datetime.now()
         
+
         try:
             pr_data = input_data.data
-            changed_files = pr_data.get('changed_files', [])
+            changed_files = pr_data.get('files', [])  # Fixed: use 'files' instead of 'changed_files'
             
             # Filter Java files - handle both string filenames and file dictionaries
             java_files = []
@@ -278,12 +331,15 @@ class JavaCodeReviewAgent(BaseAgentPlugin):
             file_analyses = []
             for file_info in java_files:
                 try:
+
                     if isinstance(file_info, str):
                         file_path = file_info
-                        file_content = self._get_file_content(file_path, pr_data)
                     else:  # Dictionary with file info
                         file_path = file_info.get('filename', '')
-                        file_content = file_info.get('full_content') or file_info.get('patch', '')
+                    
+                    # Always use _get_file_content for consistency
+                    file_content = self._get_file_content(file_path, pr_data)
+                        
                         
                     if file_content:
                         analysis = await self._analyze_java_with_llm(file_content, file_path)
@@ -324,13 +380,15 @@ class JavaCodeReviewAgent(BaseAgentPlugin):
     
     def _get_file_content(self, file_path: str, pr_data: Dict[str, Any]) -> str:
         """Extract file content from PR data"""
+
         file_contents = pr_data.get('file_contents', {})
         if file_path in file_contents:
             return file_contents[file_path]
         files = pr_data.get('files', [])
         for file_info in files:
             if file_info.get('filename') == file_path:
-                return file_info.get('patch', '') or file_info.get('content', '')
+                # Try full_content first (for repository files), then patch (for PR files)
+                return file_info.get('full_content', '') or file_info.get('patch', '') or file_info.get('content', '')
         return ""
     
     async def _analyze_java_with_llm(self, content: str, file_path: str) -> Dict[str, Any]:
@@ -434,9 +492,10 @@ class NodeJSCodeReviewAgent(BaseAgentPlugin):
         """Main processing method"""
         start_time = datetime.now()
         
+
         try:
             pr_data = input_data.data
-            changed_files = pr_data.get('changed_files', [])
+            changed_files = pr_data.get('files', [])  # Fixed: use 'files' instead of 'changed_files'
             
             # Filter JS/TS files - handle both string filenames and file dictionaries
             js_files = []
@@ -460,12 +519,14 @@ class NodeJSCodeReviewAgent(BaseAgentPlugin):
             file_analyses = []
             for file_info in js_files:
                 try:
+
                     if isinstance(file_info, str):
                         file_path = file_info
-                        file_content = self._get_file_content(file_path, pr_data)
                     else:  # Dictionary with file info
                         file_path = file_info.get('filename', '')
-                        file_content = file_info.get('full_content') or file_info.get('patch', '')
+                    
+                    # Always use _get_file_content for consistency
+                    file_content = self._get_file_content(file_path, pr_data)
                         
                     if file_content:
                         analysis = await self._analyze_nodejs_with_llm(file_content, file_path)
@@ -496,13 +557,15 @@ class NodeJSCodeReviewAgent(BaseAgentPlugin):
             )
     
     def _get_file_content(self, file_path: str, pr_data: Dict[str, Any]) -> str:
+
         file_contents = pr_data.get('file_contents', {})
         if file_path in file_contents:
             return file_contents[file_path]
         files = pr_data.get('files', [])
         for file_info in files:
             if file_info.get('filename') == file_path:
-                return file_info.get('patch', '') or file_info.get('content', '')
+                # Try full_content first (for repository files), then patch (for PR files)
+                return file_info.get('full_content', '') or file_info.get('patch', '') or file_info.get('content', '')
         return ""
     
     async def _analyze_nodejs_with_llm(self, content: str, file_path: str) -> Dict[str, Any]:
@@ -578,10 +641,21 @@ class ReactJSCodeReviewAgent(BaseAgentPlugin):
     async def process(self, input_data: AgentInput, state) -> AgentOutput:
         start_time = datetime.now()
         
+
         try:
             pr_data = input_data.data
-            changed_files = pr_data.get('changed_files', [])
-            react_files = [f for f in changed_files if f.endswith(('.jsx', '.tsx'))]
+            changed_files = pr_data.get('files', [])  # Fixed: use 'files' instead of 'changed_files'
+            
+            # Filter React files - handle both string filenames and file dictionaries
+            react_files = []
+            for f in changed_files:
+                if isinstance(f, str):
+                    if f.endswith(('.jsx', '.tsx')):
+                        react_files.append(f)
+                elif isinstance(f, dict):
+                    filename = f.get('filename', '')
+                    if filename.endswith(('.jsx', '.tsx')):
+                        react_files.append(f)
             
             if not react_files:
                 return AgentOutput(result={}, session_id=input_data.session_id)
@@ -612,9 +686,16 @@ class ReactJSCodeReviewAgent(BaseAgentPlugin):
             return AgentOutput(result={}, errors=[str(e)], session_id=input_data.session_id)
     
     def _get_file_content(self, file_path: str, pr_data: Dict[str, Any]) -> str:
+
         file_contents = pr_data.get('file_contents', {})
         if file_path in file_contents:
             return file_contents[file_path]
+        # Try to get from files list
+        files = pr_data.get('files', [])
+        for file_info in files:
+            if file_info.get('filename') == file_path:
+                # Try full_content first (for repository files), then patch (for PR files)
+                return file_info.get('full_content', '') or file_info.get('patch', '') or file_info.get('content', '')
         return ""
     
     async def _analyze_react_with_llm(self, content: str, file_path: str) -> Dict[str, Any]:
@@ -671,11 +752,22 @@ class BigQueryReviewAgent(BaseAgentPlugin):
             optional_config={}
         )
     
+
     async def process(self, input_data: AgentInput, state) -> AgentOutput:
         try:
             pr_data = input_data.data
-            changed_files = pr_data.get('changed_files', [])
-            sql_files = [f for f in changed_files if f.endswith(('.sql', '.bq'))]
+            changed_files = pr_data.get('files', [])  # Fixed: use 'files' instead of 'changed_files'
+            
+            # Filter SQL files - handle both string filenames and file dictionaries
+            sql_files = []
+            for f in changed_files:
+                if isinstance(f, str):
+                    if f.endswith(('.sql', '.bq')):
+                        sql_files.append(f)
+                elif isinstance(f, dict):
+                    filename = f.get('filename', '')
+                    if filename.endswith(('.sql', '.bq')):
+                        sql_files.append(f)
             
             if not sql_files:
                 return AgentOutput(result={}, session_id=input_data.session_id)
@@ -696,8 +788,17 @@ class BigQueryReviewAgent(BaseAgentPlugin):
             return AgentOutput(result={}, errors=[str(e)], session_id=input_data.session_id)
     
     def _get_file_content(self, file_path: str, pr_data: Dict[str, Any]) -> str:
+
         file_contents = pr_data.get('file_contents', {})
-        return file_contents.get(file_path, "")
+        if file_path in file_contents:
+            return file_contents[file_path]
+        # Try to get from files list
+        files = pr_data.get('files', [])
+        for file_info in files:
+            if file_info.get('filename') == file_path:
+                # Try full_content first (for repository files), then patch (for PR files)
+                return file_info.get('full_content', '') or file_info.get('patch', '') or file_info.get('content', '')
+        return ""
     
     async def _analyze_sql_with_llm(self, content: str, file_path: str, db_type: str) -> Dict[str, Any]:
         llm_client = LLMClient()
@@ -729,11 +830,11 @@ Return JSON: {"issues": [...], "quality_score": <num>, "complexity_score": <num>
             return {'issues': [], 'quality_score': 70}
 
 class AzureSQLReviewAgent(BaseAgentPlugin):
-    """Azure SQL review agent"""
+    """Azure SQL query analysis agent using LLM"""
     
-    def get_metadata(self) -> AgentMetadata:
+    def get_metadata(self):
         return AgentMetadata(
-            name="azuresql_review",
+            name="azure_sql_review",
             version="1.0.0",
             description="Azure SQL analysis using LLM",
             author="Database Review Team",
@@ -745,7 +846,7 @@ class AzureSQLReviewAgent(BaseAgentPlugin):
     async def process(self, input_data: AgentInput, state) -> AgentOutput:
         try:
             pr_data = input_data.data
-            sql_files = [f for f in pr_data.get('changed_files', []) if f.endswith('.sql')]
+            sql_files = [f for f in pr_data.get('files', []) if f.endswith('.sql')]  # Fixed: use 'files'
             
             file_analyses = []
             for file_path in sql_files:
@@ -788,10 +889,11 @@ class PostgreSQLReviewAgent(BaseAgentPlugin):
             parallel_compatible=True
         )
     
+
     async def process(self, input_data: AgentInput, state) -> AgentOutput:
         try:
             pr_data = input_data.data
-            sql_files = [f for f in pr_data.get('changed_files', []) if f.endswith('.sql')]
+            sql_files = [f for f in pr_data.get('files', []) if f.endswith('.sql')]  # Fixed: use 'files'
             
             file_analyses = []
             for file_path in sql_files:
@@ -834,10 +936,11 @@ class CosmosDBReviewAgent(BaseAgentPlugin):
             parallel_compatible=True
         )
     
+
     async def process(self, input_data: AgentInput, state) -> AgentOutput:
         try:
             pr_data = input_data.data
-            db_files = [f for f in pr_data.get('changed_files', []) if f.endswith(('.json', '.js'))]
+            db_files = [f for f in pr_data.get('files', []) if f.endswith(('.json', '.js'))]  # Fixed: use 'files'
             
             file_analyses = []
             for file_path in db_files:

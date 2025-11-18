@@ -1,53 +1,489 @@
-# Adding Code Review Agents to Release Risk Analyzer
+# Adding Code Review Agents - Professional Modular Architecture Guide
 
 ## Overview
 
-This guide provides complete, copy-paste ready code for adding LLM-based code review agents. The implementation analyzes code quality, complexity, and comment coverage without external linters.
+This guide demonstrates how to extend the Risk Agent Analyzer's modular agent system with new code review capabilities. The framework now uses a clean, professional package structure that simplifies agent development and maintenance.
 
-**Key Features:**
-- LLM-based analysis with strict anti-hallucination prompts
-- Supports Python, Java, Node.js, React.js
-- Supports BigQuery, Azure SQL, PostgreSQL, Cosmos DB
-- No emojis in output
-- Complete working code - no placeholders
-
----
-
-## Quick Start
-
-### What You'll Do
-
-1. Create `src/code_review_agents.py` (new file with all agent classes)
-2. Modify `src/simple_demo.py` (add 3 small sections)
-3. Test the implementation
-
-**Time Required:** 15-20 minutes
+**Current Architecture Benefits:**
+- Simplified agent base classes (no complex plugin framework)
+- Direct LLM integration with enterprise authentication
+- Type-safe data structures and professional error handling
+- Modular package organization for maintainability
+- Parallel agent execution with asyncio
 
 ---
 
-## STEP 1: Create New File
+## Architecture Overview
 
-### Create `src/code_review_agents.py`
+### Package Structure
 
-Copy the entire code block below into a new file `src/code_review_agents.py`:
+```
+src/
+├── agents/                    # All code review agents
+│   ├── __init__.py           # Agent exports
+│   └── code_review_agents.py # Agent implementations
+├── analysis/                 # Orchestration layer
+│   └── code_review_orchestrator.py
+├── integration/              # External services
+│   ├── llm_client.py        # LLM integration
+│   ├── git_integration.py   # Git operations
+│   └── environment_config.py
+└── utilities/
+    └── data_structures.py   # Type-safe result classes
+```
+
+### Agent Execution Flow
+
+```mermaid
+sequenceDiagram
+    participant CO as CodeReviewOrchestrator
+    participant Agent as Code Review Agent
+    participant LLM as LLM Client
+    participant WG as Walmart Gateway
+
+    CO->>Agent: execute(pr_data, session_id)
+    Agent->>LLM: get_llm_response(analysis_prompt)
+    LLM->>WG: POST /llm/chat (with auth headers)
+    WG-->>LLM: analysis_result
+    LLM-->>Agent: formatted_response
+    Agent-->>CO: CodeReviewResult object
+```
+
+## Adding a New Agent
+
+### Step 1: Understand the Agent Base Class
+
+Current simplified structure in `src/agents/code_review_agents.py`:
 
 ```python
+class BaseAgentPlugin:
+    """Simplified base class for all agents"""
+    def get_metadata(self):
+        raise NotImplementedError
+    
+    def execute(self, input_data):
+        raise NotImplementedError
 
+class AgentInput:
+    """Simple input wrapper"""
+    def __init__(self, data):
+        self.data = data
+```
+
+### Step 2: Create a New Agent
+
+Example: Adding a Go language agent to `src/agents/code_review_agents.py`:
+
+```python
+class GoCodeReviewAgent(BaseAgentPlugin):
+    """Go code quality and security review agent using LLM"""
+    
+    def get_metadata(self) -> AgentMetadata:
+        return AgentMetadata(
+            name="go_code_review",
+            version="1.0.0", 
+            description="Go code quality analysis using LLM - performance, concurrency, security",
+            author="Code Review Team",
+            capabilities=[AgentCapability.ANALYSIS, AgentCapability.SECURITY],
+            dependencies=[],
+            execution_priority=20,
+            execution_mode=ExecutionMode.PARALLEL,
+            parallel_compatible=True,
+            timeout_seconds=120
+        )
+    
+    async def process(self, input_data: AgentInput, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Process Go code for quality and security analysis"""
+        try:
+            pr_data = input_data.data
+            files_to_analyze = []
+            
+            # Filter Go files
+            if 'files' in pr_data and pr_data['files']:
+                files_to_analyze = [
+                    f for f in pr_data['files'] 
+                    if f.get('filename', '').endswith(('.go', '.mod', '.sum'))
+                ]
+            
+            if not files_to_analyze:
+                return {
+                    'agent': 'go_code_review',
+                    'files_analyzed': 0,
+                    'response': 'No Go files found for analysis',
+                    'issues_found': 0,
+                    'execution_time': 0.0
+                }
+            
+            # Prepare analysis content
+            file_contents = []
+            for file_info in files_to_analyze[:10]:  # Limit to prevent token overflow
+                file_content = f"""
+FILE: {file_info.get('filename', 'unknown')}
+STATUS: {file_info.get('status', 'unknown')}
+CHANGES: +{file_info.get('additions', 0)} -{file_info.get('deletions', 0)}
+
+CONTENT:
+{file_info.get('patch', 'No patch available')}
+---
 """
-Code Review Agents for Multi-Language Analysis
-Uses LLM for code quality, complexity, and comment analysis
+                file_contents.append(file_content)
+            
+            # Create comprehensive analysis prompt
+            analysis_prompt = f"""
+Analyze the following Go code changes for quality, performance, and security issues.
+
+ANALYSIS REQUIREMENTS:
+- Go-specific best practices and idioms
+- Concurrency patterns and goroutine safety
+- Memory management and performance
+- Security vulnerabilities
+- Error handling patterns
+- Package structure and naming conventions
+
+FILES TO ANALYZE:
+{"".join(file_contents)}
+
+PROVIDE ANALYSIS IN THIS FORMAT:
+1. SUMMARY: Brief overview of changes
+2. GO-SPECIFIC ISSUES:
+   - Concurrency concerns
+   - Performance issues  
+   - Memory leaks or inefficient patterns
+   - Error handling problems
+3. SECURITY ANALYSIS:
+   - Input validation issues
+   - Injection vulnerabilities
+   - Authentication/authorization concerns
+4. BEST PRACTICES:
+   - Code organization
+   - Naming conventions
+   - Go idiom compliance
+5. RECOMMENDATIONS:
+   - Specific fixes needed
+   - Performance optimizations
+   - Security improvements
+
+Focus on actionable feedback. No emojis.
 """
 
-import json
-import asyncio
-from typing import Dict, Any, List, Optional
-from datetime import datetime
+            # Get LLM analysis
+            from ..integration.llm_client import LLMClient
+            llm_client = LLMClient()
+            
+            start_time = datetime.now()
+            llm_response = llm_client.get_response(analysis_prompt)
+            execution_time = (datetime.now() - start_time).total_seconds()
+            
+            # Extract response
+            if isinstance(llm_response, dict):
+                response_text = llm_response.get('response', 'No response generated')
+            else:
+                response_text = str(llm_response)
+            
+            # Count issues (simple heuristic)
+            issues_found = self._count_issues_in_response(response_text)
+            
+            return {
+                'agent': 'go_code_review',
+                'files_analyzed': len(files_to_analyze),
+                'response': response_text,
+                'issues_found': issues_found,
+                'execution_time': execution_time,
+                'metadata': {
+                    'go_files_count': len([f for f in files_to_analyze if f.get('filename', '').endswith('.go')]),
+                    'mod_files_count': len([f for f in files_to_analyze if f.get('filename', '').endswith('.mod')]),
+                    'total_additions': sum(f.get('additions', 0) for f in files_to_analyze),
+                    'total_deletions': sum(f.get('deletions', 0) for f in files_to_analyze)
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'agent': 'go_code_review',
+                'files_analyzed': 0,
+                'response': f'Analysis failed: {str(e)}',
+                'issues_found': 0,
+                'execution_time': 0.0,
+                'error': str(e)
+            }
+    
+    def _count_issues_in_response(self, response: str) -> int:
+        """Count potential issues mentioned in the response"""
+        if not response:
+            return 0
+        
+        issue_keywords = [
+            'issue', 'problem', 'concern', 'vulnerability', 'error',
+            'race condition', 'memory leak', 'deadlock', 'goroutine leak'
+        ]
+        
+        response_lower = response.lower()
+        count = sum(response_lower.count(keyword) for keyword in issue_keywords)
+        return min(count, 20)  # Cap at reasonable limit
+```
 
-from .plugin_framework import (
-    BaseAgentPlugin, AgentMetadata, AgentInput, AgentOutput,
-    AgentCapability, ExecutionMode
+### Step 3: Register the Agent
+
+Add the new agent to the orchestrator in `src/analysis/code_review_orchestrator.py`:
+
+```python
+def _initialize_agents(self) -> Dict[str, Any]:
+    """Initialize all code review agents"""
+    return {
+        'python_agent': PythonCodeReviewAgent(),
+        'java_agent': JavaCodeReviewAgent(),
+        'nodejs_agent': NodeJSCodeReviewAgent(),
+        'react_agent': ReactJSCodeReviewAgent(),
+        'bigquery_agent': BigQueryReviewAgent(),
+        'azuresql_agent': AzureSQLReviewAgent(),
+        'postgresql_agent': PostgreSQLReviewAgent(),
+        'cosmosdb_agent': CosmosDBReviewAgent(),
+        'go_agent': GoCodeReviewAgent()  # Add new agent here
+    }
+```
+
+### Step 4: Update Package Exports
+
+Add to `src/agents/__init__.py`:
+
+```python
+from .code_review_agents import (
+    PythonCodeReviewAgent,
+    JavaCodeReviewAgent, 
+    JavaScriptCodeReviewAgent,
+    GenericCodeReviewAgent,
+    SecurityCodeReviewAgent,
+    ComplexityCodeReviewAgent,
+    CommentAnalysisAgent,
+    GoCodeReviewAgent  # Add new export
 )
-from .llm_client import LLMClient
+
+__all__ = [
+    "PythonCodeReviewAgent",
+    "JavaCodeReviewAgent", 
+    "JavaScriptCodeReviewAgent",
+    "GenericCodeReviewAgent",
+    "SecurityCodeReviewAgent",
+    "ComplexityCodeReviewAgent",
+    "CommentAnalysisAgent",
+    "GoCodeReviewAgent"  # Add to exports
+]
+```
+
+## Advanced Agent Patterns
+
+### Multi-File Analysis Agent
+
+For agents that need to analyze relationships between files:
+
+```python
+class ArchitectureReviewAgent(BaseAgentPlugin):
+    """Analyzes overall architecture and file relationships"""
+    
+    async def process(self, input_data: AgentInput, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        pr_data = input_data.data
+        
+        # Group files by type/purpose
+        file_groups = self._group_files_by_purpose(pr_data.get('files', []))
+        
+        # Analyze architectural patterns
+        architecture_analysis = await self._analyze_architecture_patterns(file_groups)
+        
+        # Check for anti-patterns
+        anti_patterns = self._detect_anti_patterns(file_groups)
+        
+        return {
+            'agent': 'architecture_review',
+            'files_analyzed': len(pr_data.get('files', [])),
+            'response': self._format_architecture_report(architecture_analysis, anti_patterns),
+            'issues_found': len(anti_patterns),
+            'metadata': {
+                'file_groups': {k: len(v) for k, v in file_groups.items()},
+                'architecture_score': self._calculate_architecture_score(architecture_analysis)
+            }
+        }
+```
+
+### Configuration-Driven Agent
+
+For agents with customizable analysis parameters:
+
+```python
+class CustomizableSecurityAgent(BaseAgentPlugin):
+    """Security agent with configurable rules and thresholds"""
+    
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        self.config = config or {}
+        self.security_rules = self.config.get('security_rules', self._default_security_rules())
+        self.severity_thresholds = self.config.get('severity_thresholds', {
+            'critical': 1,
+            'high': 3, 
+            'medium': 10
+        })
+    
+    def _default_security_rules(self) -> Dict[str, Any]:
+        return {
+            'check_sql_injection': True,
+            'check_xss': True,
+            'check_auth_bypass': True,
+            'check_crypto_issues': True,
+            'check_input_validation': True
+        }
+```
+
+## Testing Your Agent
+
+### Unit Test Example
+
+Create `tests/test_agents.py`:
+
+```python
+import asyncio
+import pytest
+from src.agents.code_review_agents import GoCodeReviewAgent, AgentInput
+
+class TestGoCodeReviewAgent:
+    
+    def setup_method(self):
+        self.agent = GoCodeReviewAgent()
+    
+    @pytest.mark.asyncio
+    async def test_go_agent_metadata(self):
+        metadata = self.agent.get_metadata()
+        assert metadata.name == "go_code_review"
+        assert "Go code quality analysis" in metadata.description
+    
+    @pytest.mark.asyncio
+    async def test_go_agent_no_files(self):
+        input_data = AgentInput({'files': []})
+        result = await self.agent.process(input_data, None)
+        
+        assert result['agent'] == 'go_code_review'
+        assert result['files_analyzed'] == 0
+        assert 'No Go files found' in result['response']
+    
+    @pytest.mark.asyncio
+    async def test_go_agent_with_go_files(self):
+        mock_files = [{
+            'filename': 'main.go',
+            'status': 'modified',
+            'additions': 10,
+            'deletions': 5,
+            'patch': 'func main() { fmt.Println("Hello") }'
+        }]
+        
+        input_data = AgentInput({'files': mock_files})
+        result = await self.agent.process(input_data, None)
+        
+        assert result['agent'] == 'go_code_review'
+        assert result['files_analyzed'] == 1
+        assert isinstance(result['execution_time'], float)
+```
+
+### Integration Test
+
+```python
+@pytest.mark.asyncio
+async def test_agent_integration():
+    """Test agent integration with orchestrator"""
+    from src.analysis.code_review_orchestrator import CodeReviewOrchestrator
+    
+    config = {'min_quality_score': 70.0}
+    orchestrator = CodeReviewOrchestrator(config)
+    
+    # Verify agent is registered
+    assert 'go_agent' in orchestrator.agents
+    assert isinstance(orchestrator.agents['go_agent'], GoCodeReviewAgent)
+```
+
+## Performance Considerations
+
+### Memory Optimization
+
+```python
+class OptimizedAgent(BaseAgentPlugin):
+    """Agent optimized for large files and memory usage"""
+    
+    MAX_FILE_SIZE = 1024 * 1024  # 1MB
+    MAX_FILES_PER_BATCH = 5
+    
+    async def process(self, input_data: AgentInput, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        files = input_data.data.get('files', [])
+        
+        # Filter by size and batch processing
+        filtered_files = [f for f in files if self._get_file_size(f) <= self.MAX_FILE_SIZE]
+        batches = [filtered_files[i:i+self.MAX_FILES_PER_BATCH] 
+                  for i in range(0, len(filtered_files), self.MAX_FILES_PER_BATCH)]
+        
+        results = []
+        for batch in batches:
+            batch_result = await self._process_batch(batch)
+            results.append(batch_result)
+        
+        return self._merge_results(results)
+```
+
+### Caching and Efficiency
+
+```python
+import hashlib
+from functools import lru_cache
+
+class CachedAgent(BaseAgentPlugin):
+    """Agent with result caching capabilities"""
+    
+    def __init__(self):
+        self.cache = {}
+    
+    def _get_content_hash(self, content: str) -> str:
+        """Generate hash for content caching"""
+        return hashlib.md5(content.encode()).hexdigest()
+    
+    async def process(self, input_data: AgentInput, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        # Create cache key from input data
+        cache_key = self._create_cache_key(input_data.data)
+        
+        # Check cache first
+        if cache_key in self.cache:
+            cached_result = self.cache[cache_key]
+            cached_result['cached'] = True
+            return cached_result
+        
+        # Process normally and cache result
+        result = await self._process_normally(input_data, context)
+        self.cache[cache_key] = result.copy()
+        result['cached'] = False
+        
+        return result
+```
+
+## Best Practices Summary
+
+### 1. Agent Design Principles
+- **Single Responsibility**: Each agent focuses on one technology or analysis type
+- **Fail Gracefully**: Always return valid results, even on errors
+- **Resource Conscious**: Limit file sizes and processing time
+- **Type Safety**: Use proper type hints and data structures
+
+### 2. LLM Integration
+- **Prompt Engineering**: Create specific, actionable prompts
+- **Token Management**: Monitor and limit token usage
+- **Error Handling**: Handle LLM failures gracefully
+- **Response Parsing**: Extract structured data from LLM responses
+
+### 3. Performance Guidelines
+- **Async Operations**: Use asyncio for I/O operations
+- **Batch Processing**: Process multiple files efficiently
+- **Caching**: Cache expensive operations when appropriate
+- **Memory Management**: Monitor memory usage for large repositories
+
+### 4. Testing Strategy
+- **Unit Tests**: Test individual agent logic
+- **Integration Tests**: Test with orchestrator
+- **Mock External Services**: Mock LLM and Git interactions
+- **Performance Tests**: Verify execution time constraints
+
+This professional modular architecture provides a solid foundation for extending the Risk Agent Analyzer with new capabilities while maintaining code quality and system performance.
 
 class PythonCodeReviewAgent(BaseAgentPlugin):
     """Python code quality and security review agent using LLM"""

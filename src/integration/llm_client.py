@@ -62,12 +62,14 @@ class LLMClient:
         self.ca_bundle_path = os.getenv("CA_BUNDLE_PATH")
         self.gateway_url = os.getenv("LLM_GATEWAY_URL", "https://wmtllmgateway.stage.walmart.com/wmtllmgateway/v1/openai")
         self.model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+
         self.model_version = os.getenv("LLM_MODEL_VERSION", "2024-07-18")
         self.api_version = os.getenv("LLM_API_VERSION", "2023-05-15")
         self.max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1000"))
         self.temperature = float(os.getenv("LLM_TEMPERATURE", "0.7"))
-        self.timeout = int(os.getenv("LLM_TIMEOUT", "30"))
+        self.timeout = int(os.getenv("LLM_TIMEOUT_SECONDS", os.getenv("LLM_TIMEOUT", "120")))  # Check both env vars
         self.verify_ssl = os.getenv("LLM_VERIFY_SSL", "false").lower() == "true"
+        self.max_retries = int(os.getenv("LLM_MAX_RETRIES", "3"))  # Add retry configuration
         
         # Load PEM key if available
         self.key_content = None
@@ -237,56 +239,86 @@ class LLMClient:
         else:
             verify_param = False
         
-        # Make API request
+        # Make API request with retry logic
         start_time = time.time()
-        try:
-            response = requests.post(
-                url,
-                headers=headers,
-                json=payload,
-                timeout=req_timeout,
-                verify=verify_param
-            )
-            response_time_ms = int((time.time() - start_time) * 1000)
-            
-            if response.status_code != 200:
-                logger.error(f"API request failed with status {response.status_code}")
-                try:
-                    error_detail = response.json()
-                except:
-                    error_detail = response.text
+        last_exception = None
+        
+        for attempt in range(self.max_retries + 1):
+            try:
+                if attempt > 0:
+                    retry_delay = min(2 ** attempt, 10)  # Exponential backoff, max 10 seconds
+                    logger.info(f"Retrying request in {retry_delay} seconds (attempt {attempt + 1}/{self.max_retries + 1})")
+                    time.sleep(retry_delay)
+                
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=req_timeout,
+                    verify=verify_param
+                )
+                response_time_ms = int((time.time() - start_time) * 1000)
+                
+                if response.status_code != 200:
+                    logger.error(f"API request failed with status {response.status_code}")
+                    try:
+                        error_detail = response.json()
+                    except:
+                        error_detail = response.text
+                    return {
+                        "success": False,
+                        "error": f"HTTP {response.status_code}",
+                        "error_detail": error_detail,
+                        "response_time_ms": response_time_ms
+                    }
+                
+                response_json = response.json()
+                content = self._extract_response_text(response_json)
+                token_usage = self._extract_token_usage(response_json)
+                
                 return {
-                    "success": False,
-                    "error": f"HTTP {response.status_code}",
-                    "error_detail": error_detail,
-                    "response_time_ms": response_time_ms
+                    "success": True,
+                    "response": content,
+                    "token_usage": token_usage,
+                    "response_time_ms": response_time_ms,
+                    "status_code": response.status_code,
+                    "model": model_name,
+                    "parameters": {
+                        "max_tokens": max_tok,
+                        "temperature": temp
+                    }
                 }
-            
-            response_json = response.json()
-            content = self._extract_response_text(response_json)
-            token_usage = self._extract_token_usage(response_json)
-            
-            return {
-                "success": True,
-                "response": content,
-                "token_usage": token_usage,
-                "response_time_ms": response_time_ms,
-                "status_code": response.status_code,
-                "model": model_name,
-                "parameters": {
-                    "max_tokens": max_tok,
-                    "temperature": temp
-                }
-            }
-            
-        except requests.exceptions.RequestException as e:
-            response_time_ms = int((time.time() - start_time) * 1000)
-            logger.error(f"Request failed: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "response_time_ms": response_time_ms
-            }
+                
+            except requests.exceptions.Timeout as e:
+                last_exception = e
+                logger.warning(f"Request timeout on attempt {attempt + 1}: {e}")
+                if attempt >= self.max_retries:
+                    break
+                continue
+                
+            except requests.exceptions.ConnectionError as e:
+                last_exception = e
+                logger.warning(f"Connection error on attempt {attempt + 1}: {e}")
+                if attempt >= self.max_retries:
+                    break
+                continue
+                
+            except requests.exceptions.RequestException as e:
+                last_exception = e
+                logger.warning(f"Request error on attempt {attempt + 1}: {e}")
+                if attempt >= self.max_retries:
+                    break
+                continue
+        
+        # If all retries failed, return error response
+        response_time_ms = int((time.time() - start_time) * 1000)
+        logger.error(f" Error: {last_exception}")
+        return {
+            "success": False,
+            "error": str(last_exception),
+            "response_time_ms": response_time_ms,
+            "retries_attempted": self.max_retries
+        }
     
     def call_llm(self, query: str, system_message: Optional[str] = None, context: Optional[str] = None) -> Dict[str, Any]:
         """
