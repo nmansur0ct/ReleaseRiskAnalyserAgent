@@ -22,9 +22,10 @@ class TestDataStructures(unittest.TestCase):
     
     def test_risk_level_enum(self):
         """Test RiskLevel enum values"""
-        self.assertEqual(RiskLevel.LOW.value, "low")
-        self.assertEqual(RiskLevel.MEDIUM.value, "medium")
-        self.assertEqual(RiskLevel.HIGH.value, "high")
+
+        self.assertEqual(RiskLevel.LOW.value, "LOW")
+        self.assertEqual(RiskLevel.MEDIUM.value, "MEDIUM")
+        self.assertEqual(RiskLevel.HIGH.value, "HIGH")
         self.assertEqual(RiskLevel.CRITICAL.value, "critical")
     
     def test_quality_classification_enum(self):

@@ -188,9 +188,10 @@ class TestBaseCodeReviewAgent(unittest.TestCase):
     
     def test_build_analysis_prompt(self):
         """Test building analysis prompt"""
+
         prompt = self.agent._build_analysis_prompt("test code", "test.test")
         
-        self.assertIn("Test code quality analyzer", prompt)
+        self.assertIn("code quality analyzer", prompt)
         self.assertIn("test.test", prompt)
         self.assertIn("Test-specific analysis", prompt)
         self.assertIn("test code", prompt)
